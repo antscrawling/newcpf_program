@@ -1,56 +1,63 @@
-# date_generator_v2.py
-from datetime import datetime
+# cpf_date_generator_v2.py
+from datetime import date, datetime  # Ensure date is imported
+from dateutil.relativedelta import relativedelta
 from calendar import monthrange
-#from cpf_date_utility_v2 import is_leapyear
 
-def generate_date_dict(start_date: datetime, end_date: datetime, birth_date: datetime) -> dict:
+def generate_date_dict(start_date, end_date, birth_date):
     """
-    Generate a dictionary of monthly periods from start_date to end_date (inclusive).
-    Keys are month indices (0-based), values are dictionaries containing:
-        - 'period_end': datetime object for the period end date
-        - 'age': age at the end of the period
+    Generates a dictionary of dates with start/end of month and age.
+    Expects input dates are datetime.date objects.
     """
+    # Input validation (optional but good practice)
+    # Corrected validation: Raise error if not specifically a date object
+    if not isinstance(start_date, date):
+         raise TypeError(f"start_date must be a date object, got {type(start_date)}")
+    if not isinstance(end_date, date):
+         raise TypeError(f"end_date must be a date object, got {type(end_date)}")
+    if not isinstance(birth_date, date):
+         raise TypeError(f"birth_date must be a date object, got {type(birth_date)}")
+
     date_dict = {}
-    index = 0
-    current_year = start_date.year
-    current_month = start_date.month
-    # Find end of the start_date's month
-    last_day = monthrange(current_year, current_month)[1]
-    period_end = datetime(current_year, current_month, last_day)
-    if start_date > period_end:
-        # If start_date is after the month end (unlikely), move to next month
-        current_month += 1
-        if current_month == 13:
-            current_month = 1
-            current_year += 1
-        last_day = monthrange(current_year, current_month)[1]
-        period_end = datetime(current_year, current_month, last_day)
-    # Loop until end_date is reached or exceeded
-    while period_end <= end_date:
+    # Start from the first day of the start month
+    current_date = start_date.replace(day=1)
+
+    while current_date <= end_date:
+        year = current_date.year
+        month = current_date.month
+
+        # Calculate period start and end as date objects
+        period_start = date(year, month, 1)  # First day of month
+        last_day_of_month = monthrange(year, month)[1]
+        period_end = date(year, month, last_day_of_month)  # Last day of month
+
+        # Comparison is now between two date objects
+        if start_date > period_end:
+            # If the simulation start date is after the end of the current month, skip
+            current_date = current_date + relativedelta(months=1)
+            continue
+
         # Calculate age at the end of the period
-        age = period_end.year - birth_date.year - ((period_end.month, period_end.day) < (birth_date.month, birth_date.day))
-        # Add the period end date and age to the dictionary
-        date_dict[index] = {
+        age_at_period_end = relativedelta(period_end, birth_date).years
+
+        date_key = period_end.strftime('%Y-%m')
+        date_dict[date_key] = {
+            # Ensure period_start isn't before the actual simulation start_date
+            'period_start': max(period_start, start_date),
             'period_end': period_end,
-            'age': age
+            'age': age_at_period_end
         }
-        index += 1
-        # Advance to next month
-        next_year = period_end.year
-        next_month = period_end.month + 1
-        if next_month == 13:
-            next_month = 1
-            next_year += 1
-        last_day = monthrange(next_year, next_month)[1]
-        period_end = datetime(next_year, next_month, last_day)
+
+        # Move to the first day of the next month (date + relativedelta -> date)
+        current_date = current_date + relativedelta(months=1)
+
     return date_dict
 
 if __name__ == "__main__":
     # Example usage
-    start_date = datetime(2025, 4, 1)
-    end_date = datetime(2080, 7, 31)
-    birth_date = datetime(1974, 7, 6)
+    start_date = date(2025, 4, 1)
+    end_date = date(2080, 7, 31)
+    birth_date = date(1974, 7, 6)
     
     date_dict = generate_date_dict(start_date, end_date, birth_date)
-    for index, period_info in date_dict.items():
-        print(f"Period {index}: {period_info['period_end'].strftime('%Y-%m-%d')}, Age: {period_info['age']}")
+    for date_key, period_info in date_dict.items():
+        print(f"Period {date_key}: Start: {period_info['period_start']}, End: {period_info['period_end']}, Age: {period_info['age']}")

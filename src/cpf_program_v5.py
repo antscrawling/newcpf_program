@@ -4,21 +4,30 @@ from dateutil.relativedelta import relativedelta
 from pprint import pprint
 #from dateutility import  MyDateDictGenerator
 import json
-from import_config import get_the_config
-from convert_date import MyDateTime
+#from import_config import get_the_config
+from reconfigure_date import MyDateTime
+
+# Define CPF contribution rates
+CPF_CONTRIBUTION_RATES = {
+    "below_55": {"employee": 0.2, "employer": 0.17},
+    "55_to_60": {"employee": 0.13, "employer": 0.13},
+    "60_to_65": {"employee": 0.075, "employer": 0.09},
+    "65_to_70": {"employee": 0.05, "employer": 0.075},
+    "above_70": {"employee": 0.05, "employer": 0.075},
+}
 from collections import OrderedDict
 
 # Load configuration
-config = get_the_config()
+#config = get_the_config()
 
 
-globals().update({
-    k: v if isinstance(v, list) and len(v) == 3 and all(isinstance(i, int) for i in v)
-    else v
-    for k, v in config.items()
-})
-
-
+#globals().update({
+#    k: v if isinstance(v, list) and len(v) == 3 and all(isinstance(i, int) for i in v)
+#    else v
+#    for k, v in config.items()
+#})
+#
+#
 # Updated CPFAccount class with parameterized logic
 
 class CPFAccount:
