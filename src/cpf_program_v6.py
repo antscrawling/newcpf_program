@@ -13,10 +13,6 @@ from collections import OrderedDict
 config = ConfigLoader('cpf_config.json')
 
 
-
-
-
-
 class CPFAccount:
     def __init__(self, config_loader: ConfigLoader):  # Accept config_loader
         self.config = config_loader  # Store the config_loader instance
@@ -207,7 +203,38 @@ class CPFAccount:
         new_balance = (current_balance[0] + change, message)  # Update balance and include message
         setattr(self, f'{account}_balance', new_balance)  # Set the updated balance
         
+    def transfer_to_ra(self):
+        """Transfer OA and SA balances to RA at age 55, up to the Basic Retirement Sum (BRS).
+        The remaining amount is transferred to the Excess Balance."""
+        # Step 1: Pay the Loan Balance in Full
+    
+       # self.excess_balance  = self._oa_balance + self._sa_balance
+        self._excess_balance += self._oa_balance
+        self._excess_balance += self._sa_balance
+        self._ra_balance += config.get('retirement_sums', {}).get('brs', {}).get('amount', 0)
+        self._excess_balance -= self._loan_balance
         
+        
+        self.update_balance('excess', self.oa_balance[0], 'transfer_oa_to_excess')
+        self.update_balance('excess', self.sa_balance[0], 'transfer_sa_to_excess')
+        self.update_balance('excess', self.loan_balance[0], 'loan_fully_paid')
+        self.update_balance('ra', self.basic_retirement_sum, 'transfer_to_ra')
+        self.update_balance('loan', -self.loan_balance[0], 'loan_fully_paid')
+
+
+    def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: ConfigLoader) -> float:
+        employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
+        employer: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False, config=config)
+        alloc: float = 0.0  # Initialize alloc with a default value
+        # Determine allocation based on age and account type                                   
+        if account in ['oa', 'ma', 'sa'] and age < config.get('age_of_brs'):
+            alloc = config.get('allocation_below_55')[account] * (employee + employer)
+        else:
+            alloc = config.get('allocation_above_55')[account] * (employee + employer)
+        return alloc
+
+   
+            
 #    def record_inflow(self, account: str, amount: float, message: str = None):
 #        """Record inflow for a specific account."""
 #        if not isinstance(amount, (int, float)):
@@ -325,10 +352,16 @@ class CPFAccount:
         ra_rate = interest_rates.get('ra', 4.0)
 
         # Apply interest to each account
-        self.record_inflow('oa', self._oa_balance * (oa_rate / 100 / 12), 'interest')
-        self.record_inflow('sa', self._sa_balance * (sa_rate / 100 / 12), 'interest')
-        self.record_inflow('ma', self._ma_balance * (ma_rate / 100 / 12), 'interest')
-        self.record_inflow('ra', self._ra_balance * (ra_rate / 100 / 12), 'interest')
+        self.update_balance('oa', self._oa_balance * (oa_rate / 100 / 12), 'interest')
+        self.update_balance('sa', self._sa_balance * (sa_rate / 100 / 12), 'interest')
+        self.update_balance('ma', self._ma_balance * (ma_rate / 100 / 12), 'interest')
+        self.update_balance('ra', self._ra_balance * (ra_rate / 100 / 12), 'interest')
+        
+        
+      # self.record_inflow('oa', self._oa_balance * (oa_rate / 100 / 12), 'interest')
+      # self.record_inflow('sa', self._sa_balance * (sa_rate / 100 / 12), 'interest')
+      # self.record_inflow('ma', self._ma_balance * (ma_rate / 100 / 12), 'interest')
+      # self.record_inflow('ra', self._ra_balance * (ra_rate / 100 / 12), 'interest')
 
     def calculate_cpf_payout(self, age: int) -> float:
         """Calculates the CPF payout amount based on age and retirement sum."""
@@ -343,39 +376,39 @@ class CPFAccount:
             return 0.0  # No payout before payout age
 
         
-    def transfer_funds(self, from_account: str, to_account: str, amount: float, is_total_amount: bool = False, message: str = None):
-        """Transfer funds from one account to another."""
-        if is_total_amount:
-            amount = getattr(self, f'{from_account}_balance')[0]  # Extract only the balance (first element of the tuple)
-        self.record_outflow(from_account, amount, message=f'transfer-{from_account}-{amount}')
-        self.record_inflow(to_account, amount, message=f'transfer-{to_account}-{amount}')
+#  def transfer_funds(self, from_account: str, to_account: str, amount: float, is_total_amount: bool = False, message: str = None):
+#      """Transfer funds from one account to another."""
+#      if is_total_amount:
+#          amount = getattr(self, f'{from_account}_balance')[0]  # Extract only the balance (first element of the tuple)
+#      self.record_outflow(from_account, amount, message=f'transfer-{from_account}-{amount}')
+#      self.record_inflow(to_account, amount, message=f'transfer-{to_account}-{amount}')
         
-    def transfer_to_ra(self):
-        """Transfer OA and SA balances to RA at age 55, up to the Basic Retirement Sum (BRS).
-        The remaining amount is transferred to the Excess Balance."""
-        # Calculate total available funds from OA and SA
-        total_funds = self._oa_balance + self._sa_balance - self._loan_balance
-
-        # Ensure loan balance is fully paid before transferring
-        if self._loan_balance > 0:
-            self.record_outflow('oa', self._loan_balance, 'loan_fully_paid')
-            self._loan_balance = 0
-
-        # Transfer up to the Basic Retirement Sum (BRS) to RA
-        brs = self.basic_retirement_sum
-        transfer_to_ra = min(total_funds, brs)
-        self.record_outflow('oa', min(self._oa_balance, transfer_to_ra), 'transfer_to_ra')
-        transfer_to_ra -= min(self._oa_balance, transfer_to_ra)
-        self.record_outflow('sa', transfer_to_ra, 'transfer_to_ra')
-        self.record_inflow('ra', min(total_funds, brs), 'transfer_to_ra')
-
-        # Transfer the remaining funds to Excess Balance
-        excess_balance = total_funds - brs
-        if excess_balance > 0:
-            self.record_outflow('oa', min(self._oa_balance, excess_balance), 'transfer_to_excess')
-            excess_balance -= min(self._oa_balance, excess_balance)
-            self.record_outflow('sa', excess_balance, 'transfer_to_excess')
-            self.record_inflow('excess', total_funds - brs, 'transfer_to_excess')
+#   def transfer_to_ra(self):
+#       """Transfer OA and SA balances to RA at age 55, up to the Basic Retirement Sum (BRS).
+#       The remaining amount is transferred to the Excess Balance."""
+#       # Calculate total available funds from OA and SA
+#       total_funds = self._oa_balance + self._sa_balance - self._loan_balance
+#
+#       # Ensure loan balance is fully paid before transferring
+#       if self._loan_balance > 0:
+#           self.record_outflow('oa', self._loan_balance, 'loan_fully_paid')
+#           self._loan_balance = 0
+#
+#       # Transfer up to the Basic Retirement Sum (BRS) to RA
+#       brs = self.basic_retirement_sum
+#       transfer_to_ra = min(total_funds, brs)
+#       self.record_outflow('oa', min(self._oa_balance, transfer_to_ra), 'transfer_to_ra')
+#       transfer_to_ra -= min(self._oa_balance, transfer_to_ra)
+#       self.record_outflow('sa', transfer_to_ra, 'transfer_to_ra')
+#       self.record_inflow('ra', min(total_funds, brs), 'transfer_to_ra')
+#
+#       # Transfer the remaining funds to Excess Balance
+#       excess_balance = total_funds - brs
+#       if excess_balance > 0:
+#           self.record_outflow('oa', min(self._oa_balance, excess_balance), 'transfer_to_excess')
+#           excess_balance -= min(self._oa_balance, excess_balance)
+#           self.record_outflow('sa', excess_balance, 'transfer_to_excess')
+#           self.record_inflow('excess', total_funds - brs, 'transfer_to_excess')
 
     def custom_serializer(self,obj):
         if isinstance(obj, datetime):
@@ -417,65 +450,65 @@ class CPFAccount:
 
 
 # Updated generate_cpf_projection function
-def generate_cpf_projection():
-    config_loader = ConfigLoader('cpf_config.json')
-    cpf = CPFAccount(config_loader)
-    cpf.current_date = datetime.strptime(config_loader.get('start_date'), "%Y-%m-%d")
-
-    cpf.oa_balance = config_loader.get('oa_balance', 0)
-    cpf.sa_balance = config_loader.get('sa_balance', 0)
-    cpf.ma_balance = config_loader.get('ma_balance', 0)
-    cpf.ra_balance = config_loader.get('ra_balance', 0)
-    cpf.excess_balance = config_loader.get('excess_balance', 0)
-    cpf.loan_balance = config_loader.get('loan_balance', 0)
-
-    cpf.basic_retirement_sum = config_loader.get('retirement_sums', {}).get('brs', {}).get('amount', 0)
-    cpf.full_retirement_sum = config_loader.get('retirement_sums', {}).get('frs', {}).get('amount', 0)
-    cpf.enhanced_retirement_sum = config_loader.get('retirement_sums', {}).get('ers', {}).get('amount', 0)
-
-    salary = config_loader.get('salary', 0)
-
-    print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
-    print("-" * 150)
-
-    for month in range(1, 300):
-        age = cpf.get_age(current_date=cpf.current_date)
-
-        # Loan payment logic
-        loan_payments = config_loader.get('loan_payments', {})
-        loan_payment = loan_payments.get('year_1_2', 0) if age < 24 else loan_payments.get('year_3', 0)
-
-        if age < 55:
-            loan_payment = min(loan_payment, cpf.loan_balance[0])
-            cpf.loan_balance = (calculate_loan_balance(cpf.loan_balance[0], interest_rate=2.5, monthly_payment=loan_payment, months=1), "loan_payment")
-        elif age == 55:
-            # Pay off the remaining loan balance at age 55
-            remaining_loan = cpf.loan_balance[0]
-            cpf.loan_balance = (0, "loan_fully_paid")
-            cpf.record_outflow('oa', remaining_loan, 'loan_fully_paid')
-
-        # CPF Transfer of funds at the age of 55
-        if age == 55:
-            cpf.transfer_to_ra()
-
-        # CPF allocation logic
-        for account in ['oa', 'ma', 'sa'] if age < 55 else ['oa', 'ma', 'ra']:
-            allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)
-            cpf.record_inflow(account=account, amount=allocation, message=f'allocation_{account}')
-
-        # Apply interest at the end of the year
-        if cpf.current_date.month == 12:
-            cpf.apply_interest(age=age)
-
-        # CPF payout
-        cpf_payout = cpf.calculate_cpf_payout(age=age)
-        cpf.record_inflow(account='excess', amount=cpf_payout, message=f'cpf_payout_{age}')
-
-        # Display balances
-        print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
-
-        # Move to the next month
-        cpf.current_date += timedelta(days=30)
+#def generate_cpf_projection():
+#    config_loader = ConfigLoader('cpf_config.json')
+#    cpf = CPFAccount(config_loader)
+#    cpf.current_date = datetime.strptime(config_loader.get('start_date'), "%Y-%m-%d")
+#
+#    cpf.oa_balance = config_loader.get('oa_balance', 0)
+#    cpf.sa_balance = config_loader.get('sa_balance', 0)
+#    cpf.ma_balance = config_loader.get('ma_balance', 0)
+#    cpf.ra_balance = config_loader.get('ra_balance', 0)
+#    cpf.excess_balance = config_loader.get('excess_balance', 0)
+#    cpf.loan_balance = config_loader.get('loan_balance', 0)
+#
+#    cpf.basic_retirement_sum = config_loader.get('retirement_sums', {}).get('brs', {}).get('amount', 0)
+#    cpf.full_retirement_sum = config_loader.get('retirement_sums', {}).get('frs', {}).get('amount', 0)
+#    cpf.enhanced_retirement_sum = config_loader.get('retirement_sums', {}).get('ers', {}).get('amount', 0)
+#
+#    salary = config_loader.get('salary', 0)
+#
+#    print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
+#    print("-" * 150)
+#
+#    for month in range(1, 300):
+#        age = cpf.get_age(current_date=cpf.current_date)
+#
+#        # Loan payment logic
+#        loan_payments = config_loader.get('loan_payments', {})
+#        loan_payment = loan_payments.get('year_1_2', 0) if age < 24 else loan_payments.get('year_3', 0)
+#
+#        if age < 55:
+#            loan_payment = min(loan_payment, cpf.loan_balance[0])
+#            cpf.loan_balance = (calculate_loan_balance(cpf.loan_balance[0], interest_rate=2.5, monthly_payment=loan_payment, months=1), "loan_payment")
+#        elif age == 55:
+#            # Pay off the remaining loan balance at age 55
+#            remaining_loan = cpf.loan_balance[0]
+#            cpf.loan_balance = (0, "loan_fully_paid")
+#            cpf.record_outflow('oa', remaining_loan, 'loan_fully_paid')
+#
+#        # CPF Transfer of funds at the age of 55
+#        if age == 55:
+#            cpf.transfer_to_ra()
+#
+#        # CPF allocation logic
+#        for account in ['oa', 'ma', 'sa'] if age < 55 else ['oa', 'ma', 'ra']:
+#            allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)
+#            cpf.record_inflow(account=account, amount=allocation, message=f'allocation_{account}')
+#
+#        # Apply interest at the end of the year
+#        if cpf.current_date.month == 12:
+#            cpf.apply_interest(age=age)
+#
+#        # CPF payout
+#        cpf_payout = cpf.calculate_cpf_payout(age=age)
+#        cpf.record_inflow(account='excess', amount=cpf_payout, message=f'cpf_payout_{age}')
+#
+#        # Display balances
+#        print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
+#
+#        # Move to the next month
+#        cpf.current_date += timedelta(days=30)
 
 
 def calculate_loan_balance(principal: float, interest_rate: float, monthly_payment: float, months: int) -> float:
