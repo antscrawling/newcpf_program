@@ -1,5 +1,5 @@
 # cpf_date_generator_v2.py
-from datetime import date, datetime  # Ensure date is imported
+from datetime import date, datetime # Ensure date is imported
 from dateutil.relativedelta import relativedelta
 from calendar import monthrange
 
@@ -9,12 +9,11 @@ def generate_date_dict(start_date, end_date, birth_date):
     Expects input dates are datetime.date objects.
     """
     # Input validation (optional but good practice)
-    # Corrected validation: Raise error if not specifically a date object
-    if not isinstance(start_date, date):
+    if not isinstance(start_date, date) or isinstance(start_date, datetime):
          raise TypeError(f"start_date must be a date object, got {type(start_date)}")
-    if not isinstance(end_date, date):
+    if not isinstance(end_date, date) or isinstance(end_date, datetime):
          raise TypeError(f"end_date must be a date object, got {type(end_date)}")
-    if not isinstance(birth_date, date):
+    if not isinstance(birth_date, date) or isinstance(birth_date, datetime):
          raise TypeError(f"birth_date must be a date object, got {type(birth_date)}")
 
     date_dict = {}
@@ -26,9 +25,9 @@ def generate_date_dict(start_date, end_date, birth_date):
         month = current_date.month
 
         # Calculate period start and end as date objects
-        period_start = date(year, month, 1)  # First day of month
+        period_start = date(year, month, 1) # First day of month
         last_day_of_month = monthrange(year, month)[1]
-        period_end = date(year, month, last_day_of_month)  # Last day of month
+        period_end = date(year, month, last_day_of_month) # Last day of month
 
         # Comparison is now between two date objects
         if start_date > period_end:

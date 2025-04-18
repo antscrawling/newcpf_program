@@ -1,4 +1,6 @@
 {
+    "cpf_payout_age":67,
+    "age_of_brs" : 55,
     "start_date": "2025-04-01",
     "end_date": "2080-07-31",
     "birth_date": "1974-07-06",
@@ -30,14 +32,12 @@
             "payout": 3300
         }
     },
-    "initial_balances": {
-        "oa_balance": 167892.11,
-        "sa_balance": 253163.35,
-        "ma_balance": 72952.37,
-        "ra_balance": 0.00,
-        "excess_balance": 0.00,
-        "loan_balance": 251101.00
-    },
+    "oa_balance": 167892.11,
+    "sa_balance": 253163.35,
+    "ma_balance": 72952.37,
+    "ra_balance": 0.00,
+    "excess_balance": 0.00,
+    "loan_balance": 251101.00,
     "loan_payments": {
         "year_1_2": 1687.39,
         "year_3": 1782.27,
@@ -76,5 +76,12 @@
             "employer": 0.075
         }
     },
-    "NEW_KEY": "New Value"
+    "NEW_KEY": "New Value",
+    "cpf_payout": "cpf.calculate_cpf_payout(age=age)",
+    "loan_balance_calculation": "cpf.loan_balance = (calculate_loan_balance(cpf.loan_balance[0], interest_rate=2.5, monthly_payment=loan_payment, months=1), \"loan_payment\")",
+    "allocation_calculation": "allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)",
+    "age_calculation": "return DATE_DICT.get(current_date.strftime(\"%b-%Y\"))['age']",
+    "get_age": "def get_age(self, current_date: datetime) -> int:\n    birth_date = self.config.get('birth_date')\n    return current_date.year - birth_date.year - (\n        (current_date.month, current_date.day) < (birth_date.month, birth_date.day)\n    )",
+    "date_dict": "cpf.get_date_dict(start_date=config_loader.get('start_date'), birth_date=config_loader.get('birth_date'), end_date=config_loader.get('end_date'))",
+    "generate_cpf_projection": "def generate_cpf_projection():\n    config_loader = ConfigLoader('cpf_config.json')\n    cpf = CPFAccount(config_loader)\n\n    # Assign balances with default values\n    cpf.oa_balance = config_loader.get('oa_balance', 0)\n    cpf.sa_balance = config_loader.get('sa_balance', 0)\n    cpf.ma_balance = config_loader.get('ma_balance', 0)\n    cpf.ra_balance = config_loader.get('ra_balance', 0)\n    cpf.excess_balance = config_loader.get('excess_balance', 0)\n    cpf.loan_balance = config_loader.get('loan_balance', 0)\n\n    cpf.basic_retirement_sum = config_loader.get('retirement_sums', {}).get('brs', {}).get('amount', 0)\n    cpf.full_retirement_sum = config_loader.get('retirement_sums', {}).get('frs', {}).get('amount', 0)\n    cpf.enhanced_retirement_sum = config_loader.get('retirement_sums', {}).get('ers', {}).get('amount', 0)\n\n    salary = config_loader.get('salary', 0)\n\n    print(f\"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}\")\n    print(\"-\" * 150)\n\n    # Generate date dictionary\n    date_dict = cpf.get_date_dict(\n        start_date=config_loader.get('start_date'),\n        birth_date=config_loader.get('birth_date'),\n        end_date=config_loader.get('end_date')\n    )\n\n    for date_key, date_info in date_dict.items():\n        age = date_info['age']\n        cpf.current_date = datetime.strptime(date_key, '%b-%Y')\n\n        # Loan payment logic\n        loan_payments = config_loader.get('loan_payments', {})\n        loan_payment = loan_payments.get('year_1_2', 0) if age < 24 else loan_payments.get('year_3', 0)\n        loan_payment = min(loan_payment, cpf.loan_balance[0])\n        cpf.loan_balance = (cpf.loan_balance[0] - loan_payment, \"loan_payment\")\n\n        # CPF Transfer of funds at the age of 55\n        if age == 55:\n            cpf.transfer_to_ra()\n            cpf.loan_balance = (0, \"loan_payment\")\n            cpf.excess_balance = (cpf.oa_balance[0] + cpf.sa_balance[0], \"transfer_to_excess\")\n\n        # CPF allocation logic\n        for account in ['oa', 'ma', 'sa'] if age < 55 else ['oa', 'ma', 'ra']:\n            allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)\n            cpf.record_inflow(account=account, amount=allocation, message=f'allocation_{account}')\n\n        # Apply interest at the end of the year\n        if cpf.current_date.month == 12:\n            cpf.apply_interest(age=age)\n\n        # CPF payout\n        cpf_payout = cpf.calculate_cpf_payout(age=age)\n        cpf.record_inflow(account='excess', amount=cpf_payout, message=f'cpf_payout_{age}')\n\n        # Display balances\n        print(f\"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}\")"
 }

@@ -1,4 +1,6 @@
 {
+    "cpf_payout_age":67,
+    "age_of_brs" : 55,
     "start_date": "2025-04-01",
     "end_date": "2080-07-31",
     "birth_date": "1974-07-06",
@@ -30,14 +32,12 @@
             "payout": 3300
         }
     },
-    "initial_balances": {
-        "oa_balance": 167892.11,
-        "sa_balance": 253163.35,
-        "ma_balance": 72952.37,
-        "ra_balance": 0.00,
-        "excess_balance": 0.00,
-        "loan_balance": 251101.00
-    },
+    "oa_balance": 167892.11,
+    "sa_balance": 253163.35,
+    "ma_balance": 72952.37,
+    "ra_balance": 0.00,
+    "excess_balance": 0.00,
+    "loan_balance": 251101.00,
     "loan_payments": {
         "year_1_2": 1687.39,
         "year_3": 1782.27,
