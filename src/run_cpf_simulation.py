@@ -19,12 +19,21 @@ def transfer_to_ra(self):
     """Transfer OA and SA balances to RA at age 55, up to the Basic Retirement Sum (BRS).
     The remaining amount is transferred to the Excess Balance."""
     # Step 1: Pay the Loan Balance in Full
-    total_funds = self._oa_balance + self._sa_balance
-    loan_payment = min(total_funds, self._loan_balance)
-    self.record_outflow('oa', min(self._oa_balance, loan_payment), 'loan_fully_paid')
-    loan_payment -= min(self._oa_balance, loan_payment)
-    self.record_outflow('sa', loan_payment, 'loan_fully_paid')
-    self._loan_balance = 0
+    self.excess_balance  = self._oa_balance + self._sa_balance
+    self.record_outflow('oa', self._oa_balance, 'transfer_to_excess')
+    self.record_outflow('sa', self._sa_balance, 'transfer_to_excess')
+    self.record_inflow('excess', self.excess_balance, 'transfer_to_excess')
+    self.excess_balance -= self._loan_balance
+    self.record_outflow('excess', -self._loan_balance, 'loan_fully_paid')
+    self.ra_balance += 106500
+    self.record_inflow('ra', 106500, 'transfer_to_ra')
+    self._sa_balance = 0
+    self._sa_message = "SA balance zeroed out after transfer to RA and Excess Balance"
+    
+    
+    
+    
+    
 
     # Step 2: Transfer Remaining OA + SA to Excess Balance
     remaining_funds = self._oa_balance + self._sa_balance
@@ -42,14 +51,14 @@ def transfer_to_ra(self):
     self._sa_balance = 0
     self._sa_message = "SA balance zeroed out after transfer to RA and Excess Balance"
 
-def transfer_to_excess(self):
-    """Transfer OA and SA balances to Excess Balance, pay the loan in full, and close SA balance."""
-    # Step 1: Transfer OA + SA to Excess Balance
-    total_transfer = self._oa_balance + self._sa_balance
-    self.record_outflow('oa', self._oa_balance, 'transfer_to_excess')
-    self.record_outflow('sa', self._sa_balance, 'transfer_to_excess')
-    self.record_inflow('excess', total_transfer, 'transfer_to_excess')
-
+#def transfer_to_excess(self):
+#    """Transfer OA and SA balances to Excess Balance, pay the loan in full, and close SA balance."""
+#    # Step 1: Transfer OA + SA to Excess Balance
+#    total_transfer = self._oa_balance + self._sa_balance
+#    self.record_outflow('oa', self._oa_balance, 'transfer_to_excess')
+#    self.record_outflow('sa', self._sa_balance, 'transfer_to_excess')
+#    self.record_inflow('excess', total_transfer, 'transfer_to_excess')
+#
     # Step 2: Pay the Loan Balance in Full
     loan_payment = min(total_transfer, self._loan_balance)
     self.record_outflow('excess', loan_payment, 'loan_fully_paid')
@@ -93,20 +102,24 @@ def generate_cpf_projection():
 
         # Special handling for July 2029 (age 55) - ONE TIME TRANSFER
         if age == 55 and current_month_year == 'Jul-2029':
-            # Step 1: Transfer OA and SA to Excess Balance
-            total_transfer = cpf.oa_balance[0] + cpf.sa_balance[0]
-            cpf.record_outflow('oa', cpf.oa_balance[0], 'transfer_to_excess')
-            cpf.record_outflow('sa', cpf.sa_balance[0], 'transfer_to_excess')
-            cpf.record_inflow('excess', total_transfer, 'transfer_to_excess')
-            
-            # Step 2: Pay loan in full from Excess Balance
-            loan_payment = min(cpf.excess_balance[0], cpf.loan_balance[0])
-            cpf.record_outflow('excess', loan_payment, 'loan_fully_paid')
-            cpf.loan_balance = (cpf.loan_balance[0] - loan_payment, "loan_fully_paid")
-            
-            # Step 3: Close SA Account
+            cpf.transfer_to_ra()  # Transfer to RA
+           
+           
+           
+        
+           
+
+           
+           
+           
+           
+
+           
+           
+           
+
+            # Step 4: Mark SA as closed
             sa_closed = True
-            cpf.sa_balance = (0, "SA closed after transfer to Excess Balance")
             
         # Skip operations on SA if it is closed
         if sa_closed:
@@ -187,29 +200,33 @@ def main():
         cpf.current_date = date_info['period_end']
 
         # Loan payment logic
-        loan_payments = config_loader.get('loan_payments', {})
-        loan_payment = loan_payments.get('year_1_2', 0) if age < 24 else loan_payments.get('year_3', 0)
-        loan_payment = min(loan_payment, cpf.loan_balance[0])
-        cpf.loan_balance = (cpf.loan_balance[0] - loan_payment, "loan_payment")
-
-        # CPF Transfer of funds at the age of 55
-        if age == 55:
-            cpf.transfer_to_ra()
-            cpf.loan_balance = (0, "loan_payment")
-            cpf.excess_balance = (cpf.oa_balance[0] + cpf.sa_balance[0], "transfer_to_excess")
+        if age < 55 or (age == 55 and cpf.current_date.month >7 ):
+            loan_payments = config_loader.get('loan_payments', {})
+            loan_payment = loan_payments.get('year_1_2', 0) if age < 24 else loan_payments.get('year_3', 0)
+            loan_payment = min(loan_payment, cpf.loan_balance[0])
+            cpf.loan_balance = (cpf.loan_balance[0] - loan_payment, "loan_payment")
 
         # CPF allocation logic
         for account in ['oa', 'ma', 'sa'] if age < 55 else ['oa', 'ma', 'ra']:
             allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)
             cpf.record_inflow(account=account, amount=allocation, message=f'allocation_{account}')
-
         # Apply interest at the end of the year
         if cpf.current_date.month == 12:
             cpf.apply_interest(age=age)
-
         # CPF payout
         cpf_payout = cpf.calculate_cpf_payout(age=age)
         cpf.record_inflow(account='excess', amount=cpf_payout, message=f'cpf_payout_{age}')
+
+
+
+        # CPF Transfer of funds at the age of 55
+        if age == 55 and cpf.current_date.month == 7:
+            cpf.transfer_to_ra() # ntransfer to EXCESS_BALANCE not RA
+            cpf.loan_balance = (0, "loan_payment")
+            cpf._sa_balance = 0
+            cpf._sa_message = "SA balance zeroed out after transfer to RA and Excess Balance"
+           # cpf.excess_balance = (cpf.oa_balance[0] + cpf.sa_balance[0], "transfer_to_excess")
+           # cpf.excess_balance ``                                                
 
         # Display balances
         print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
