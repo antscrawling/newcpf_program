@@ -4,36 +4,11 @@ from cpf_date_utility_v2 import run_simulation
 from cpf_program_v6 import CPFAccount
 from datetime import datetime, timedelta
 from pprint import pprint
+import pandas as pd
+from datetime import datetime, date
+import inspect
 
 
-def flatten_cpf_summary_as_dict(cpf):
-    """
-    Flatten the CPF account summary into a dictionary.
-    """
-    return {
-        'current_date': cpf.current_date.strftime('%Y-%m-%d'),
-        'oa_balance': cpf.oa_balance[0],
-        'sa_balance': cpf.sa_balance[0],
-        'ma_balance': cpf.ma_balance[0],
-        'ra_balance': cpf.ra_balance[0],
-        'excess_balance': cpf.excess_balance[0],
-        'loan_balance': cpf.loan_balance[0],
-        'basic_retirement_sum': cpf.basic_retirement_sum,
-        'full_retirement_sum': cpf.full_retirement_sum,
-        'enhanced_retirement_sum': cpf.enhanced_retirement_sum,
-        '_oa_log': getattr(cpf, '_oa_log', []),
-        '_sa_log': getattr(cpf, '_sa_log', []),
-        '_ra_log': getattr(cpf, '_ra_log', []),
-        '_excess_log': getattr(cpf, '_excess_log', []),
-        '_loan_log': getattr(cpf, '_loan_log', []),
-        '_oa_message': cpf._oa_message,
-        '_sa_message': cpf._sa_message,
-        '_ra_message': cpf._ra_message,
-        '_excess_message': cpf._excess_message,
-        '_loan_message': cpf._loan_message
-        }
-    
-    
 def main():
     # Step 1: Load the configuration
     config_loader = ConfigLoader('new_config.json')
@@ -117,14 +92,41 @@ def main():
            # cpf.excess_balance ``                                                
 
         # Display balances
-        print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
+      #  print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
        
        
-            
-        if( age == 55 and cpf.current_date.month == 7) or (age == 55 and cpf.current_date.month == 8):
-            flattened_dict = flatten_cpf_summary_as_dict(cpf)
-            pprint(flattened_dict)
+        mydict = {}    
+       # if (age == 55 and cpf.current_date.month == 7) or (age == 55 and cpf.current_date.month == 8):
+        accounts = ['oa', 'sa', 'ma', 'ra', 'excess', 'loan']
+        for account in accounts:
+            log_key = f'_{account}_log'
+            if log_key in cpf.__dict__:
+                print(f"Filtered Logs for {account.upper()}:")
+                filtered_logs = [
+                    {key: entry[key] for key in ['amount', 'new_balance', 'old_balance', 'type'] if key in entry}
+                    for entry in cpf.__dict__[log_key]
+                ]
+                pprint(filtered_logs)
           
+       
+
+            
+          
+          
+          
+          
+            
+            
+            
+            
+            
+            
+           
+           
+
+            
+            
+            
             
         
 if __name__ == "__main__":

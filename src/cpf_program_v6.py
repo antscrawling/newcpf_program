@@ -8,6 +8,7 @@ from cpf_config_loader_v2 import ConfigLoader
 from reconfigure_date import MyDateTime
 
 from collections import OrderedDict
+import inspect
 
 # Load configuration
 config = ConfigLoader('cpf_config.json')
@@ -233,7 +234,11 @@ class CPFAccount:
             alloc = config.get('allocation_above_55')[account] * (employee + employer)
         return alloc
 
-   
+    def get_property_attributes(cls):
+        return [
+        name for name, value in inspect.getmembers(cls)
+        if isinstance(value, property)
+    ]
             
 #    def record_inflow(self, account: str, amount: float, message: str = None):
 #        """Record inflow for a specific account."""
