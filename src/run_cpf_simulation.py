@@ -95,8 +95,9 @@ def main():
         # Display balances
         print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
        
-       
+    cpf.close()
  
  #ate.month == 7) or (age == 55 and cpf.current_date.month == 8):                                                                                                                                                                                                                                                          
 if __name__ == "__main__":
     main()
+    

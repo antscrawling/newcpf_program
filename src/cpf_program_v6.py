@@ -456,7 +456,7 @@ def calculate_loan_balance(principal: float, interest_rate: float, monthly_payme
 
 if __name__ == "__main__":
     # Initialize CPFAccount
-    cpf = CPFAccount(config_loader=ConfigLoader('cpf_config.json'))
+    cpf = CPFAccount(config_loader=ConfigLoader('new_config.json'))
 
     # Update balances
     cpf.sa_balance = (1000, "Initial SA balance")
@@ -466,6 +466,6 @@ if __name__ == "__main__":
     cpf.sa_balance = (1500, "SA inflow")
     cpf.oa_balance = (1800, "OA outflow")
 
-    # Close the log writer process
+    # Close the log writer process explicitly (optional, as atexit will handle it)
     cpf.close()
 
