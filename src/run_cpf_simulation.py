@@ -103,7 +103,7 @@ def main():
             if log_key in cpf.__dict__:
                 print(f"Filtered Logs for {account.upper()}:")
                 filtered_logs = [
-                    {key: entry[key] for key in ['amount', 'new_balance', 'old_balance', 'type'] if key in entry}
+                    {key: entry[key] for key in ['current_date', 'new_balance', 'old_balance', 'type'] if key in entry}
                     for entry in cpf.__dict__[log_key]
                 ]
                 pprint(filtered_logs)
