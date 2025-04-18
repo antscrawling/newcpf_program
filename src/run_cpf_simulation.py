@@ -7,6 +7,7 @@ from pprint import pprint
 import pandas as pd
 from datetime import datetime, date
 import inspect
+import json
 
 
 def main():
@@ -92,42 +93,10 @@ def main():
            # cpf.excess_balance ``                                                
 
         # Display balances
-      #  print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
+        print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
        
        
-        mydict = {}    
-       # if (age == 55 and cpf.current_date.month == 7) or (age == 55 and cpf.current_date.month == 8):
-        accounts = ['oa', 'sa', 'ma', 'ra', 'excess', 'loan']
-        for account in accounts:
-            log_key = f'_{account}_log'
-            if log_key in cpf.__dict__:
-                print(f"Filtered Logs for {account.upper()}:")
-                filtered_logs = [
-                    {key: entry[key] for key in ['current_date', 'new_balance', 'old_balance', 'type'] if key in entry}
-                    for entry in cpf.__dict__[log_key]
-                ]
-                pprint(filtered_logs)
-          
-       
-
-            
-          
-          
-          
-          
-            
-            
-            
-            
-            
-            
-           
-           
-
-            
-            
-            
-            
-        
+ 
+ #ate.month == 7) or (age == 55 and cpf.current_date.month == 8):                                                                                                                                                                                                                                                          
 if __name__ == "__main__":
     main()

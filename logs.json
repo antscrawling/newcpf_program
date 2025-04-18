@@ -1,0 +1,24 @@
+{"date": "2025-04-18 16:40:55", "old_balance": 0.0, "new_balance": 1000, "amount": 1000.0, "type": "inflow", "message": "sa-Initial SA balance-1000.0"}
+{"date": "2025-04-18 16:40:55", "old_balance": 0.0, "new_balance": 2000, "amount": 2000.0, "type": "inflow", "message": "oa-Initial OA balance-2000.0"}
+{"date": "2025-04-18 16:40:55", "old_balance": 1000, "new_balance": 1500, "amount": 500, "type": "inflow", "message": "sa-SA inflow-500"}
+{"date": "2025-04-18 16:40:55", "old_balance": 2000, "new_balance": 1800, "amount": -200, "type": "outflow", "message": "oa-OA outflow--200"}
+{"date": "2025-04-18 16:41:32", "old_balance": 0.0, "new_balance": 167892.11, "amount": 167892.11, "type": "inflow", "message": "oa-initial_oa_balance-167892.11"}
+{"date": "2025-04-18 16:41:32", "old_balance": 0.0, "new_balance": 253163.35, "amount": 253163.35, "type": "inflow", "message": "sa-initial_sa_balance-253163.35"}
+{"date": "2025-04-18 16:41:32", "old_balance": 0.0, "new_balance": 72952.37, "amount": 72952.37, "type": "inflow", "message": "ma-initial_ma_balance-72952.37"}
+{"date": "2025-04-18 16:41:32", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "outflow", "message": "ra-initial_ra_balance-0.0"}
+{"date": "2025-04-18 16:41:32", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "outflow", "message": "excess-initial_excess_balance-0.0"}
+{"date": "2025-04-18 16:41:32", "old_balance": 0.0, "new_balance": 251101.0, "amount": 251101.0, "type": "outflow", "message": "loan-initial_loan_balance-251101.0"}
+{"date": "2025-04-18 16:41:39", "old_balance": 0.0, "new_balance": 1000, "amount": 1000.0, "type": "inflow", "message": "sa-Initial SA balance-1000.0"}
+{"date": "2025-04-18 16:41:39", "old_balance": 0.0, "new_balance": 2000, "amount": 2000.0, "type": "inflow", "message": "oa-Initial OA balance-2000.0"}
+{"date": "2025-04-18 16:41:39", "old_balance": 1000, "new_balance": 1500, "amount": 500, "type": "inflow", "message": "sa-SA inflow-500"}
+{"date": "2025-04-18 16:41:39", "old_balance": 2000, "new_balance": 1800, "amount": -200, "type": "outflow", "message": "oa-OA outflow--200"}
+{"date": "2025-04-18 16:42:06", "old_balance": 0.0, "new_balance": 1000, "amount": 1000.0, "type": "inflow", "message": "sa-Initial SA balance-1000.0"}
+{"date": "2025-04-18 16:42:06", "old_balance": 0.0, "new_balance": 2000, "amount": 2000.0, "type": "inflow", "message": "oa-Initial OA balance-2000.0"}
+{"date": "2025-04-18 16:42:06", "old_balance": 1000, "new_balance": 1500, "amount": 500, "type": "inflow", "message": "sa-SA inflow-500"}
+{"date": "2025-04-18 16:42:06", "old_balance": 2000, "new_balance": 1800, "amount": -200, "type": "outflow", "message": "oa-OA outflow--200"}
+{"date": "2025-04-18 16:42:58", "old_balance": 0.0, "new_balance": 167892.11, "amount": 167892.11, "type": "inflow", "message": "oa-initial_oa_balance-167892.11"}
+{"date": "2025-04-18 16:42:58", "old_balance": 0.0, "new_balance": 253163.35, "amount": 253163.35, "type": "inflow", "message": "sa-initial_sa_balance-253163.35"}
+{"date": "2025-04-18 16:42:58", "old_balance": 0.0, "new_balance": 72952.37, "amount": 72952.37, "type": "inflow", "message": "ma-initial_ma_balance-72952.37"}
+{"date": "2025-04-18 16:42:58", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "outflow", "message": "ra-initial_ra_balance-0.0"}
+{"date": "2025-04-18 16:42:58", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "outflow", "message": "excess-initial_excess_balance-0.0"}
+{"date": "2025-04-18 16:42:58", "old_balance": 0.0, "new_balance": 251101.0, "amount": 251101.0, "type": "outflow", "message": "loan-initial_loan_balance-251101.0"}

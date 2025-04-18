@@ -9,6 +9,7 @@ from reconfigure_date import MyDateTime
 
 from collections import OrderedDict
 import inspect
+from multiprocessing import Process, Queue
 
 # Load configuration
 config = ConfigLoader('cpf_config.json')
@@ -18,6 +19,8 @@ class CPFAccount:
     def __init__(self, config_loader: ConfigLoader):  # Accept config_loader
         self.config = config_loader  # Store the config_loader instance
         self.current_date = datetime.now()
+
+        # Account balances and logs
         self._oa_balance = 0.0
         self._oa_log = []
         self._oa_message = ""
@@ -38,11 +41,11 @@ class CPFAccount:
         self._excess_balance_log = []
         self._excess_message = ""
 
-        self.basic_retirement_sum = 0.0
-
         self._loan_balance = 0.0
         self._loan_balance_log = []
         self._loan_message = ""
+
+        self.basic_retirement_sum = 0.0
 
         self.inflow = {
             'loan_balance': 0.0,
@@ -61,9 +64,38 @@ class CPFAccount:
             'ra_balance': 0.0
         }
 
+        # Log saving setup
+        self.log_queue = Queue()
+        self.log_process = Process(target=self._save_log_worker, args=(self.log_queue, 'logs.json'))
+        self.log_process.start()
+
+    def _save_log_worker(self, queue, filename):
+        """Worker process to save logs to a file."""
+        with open(filename, 'a') as file:
+            while True:
+                log_entry = queue.get()
+                if log_entry == "STOP":
+                    break
+                file.write(json.dumps(log_entry, default=self.custom_serializer) + '\n')
+
+    def save_log_to_file(self, log_entry):
+        """Send log entry to the worker process."""
+        self.log_queue.put(log_entry)
+
+    def close_log_writer(self):
+        """Stop the log writer process."""
+        self.log_queue.put("STOP")
+        self.log_process.join()
+
+    def custom_serializer(self, obj):
+        """Custom serializer for non-serializable objects like datetime."""
+        if isinstance(obj, datetime):
+            return obj.strftime("%Y-%m-%d %H:%M:%S")
+        raise TypeError("Type not serializable")
+
     @property
     def oa_balance(self):
-        return (self._oa_balance, self._oa_message)
+        return self._oa_balance, self._oa_message
 
     @oa_balance.setter
     def oa_balance(self, data):
@@ -72,20 +104,24 @@ class CPFAccount:
         else:
             value, message = data, "no message"
         diff = value - self._oa_balance
-        self._oa_log.append({
+        log_entry = {
             'date': self.current_date,
             'old_balance': self._oa_balance,
             'new_balance': value,
             'amount': diff,
             'type': 'inflow' if diff > 0 else 'outflow',
             'message': f'oa-{message}-{diff}'
-        })
+        }
+        self._oa_log.append(log_entry)
         self._oa_balance = value
         self._oa_message = message
 
+        # Save the log entry using multiprocessing
+        self.save_log_to_file(log_entry)
+
     @property
     def sa_balance(self):
-        return ( self._sa_balance,self._sa_message)
+        return self._sa_balance, self._sa_message
 
     @sa_balance.setter
     def sa_balance(self, data):
@@ -94,20 +130,24 @@ class CPFAccount:
         else:
             value, message = data, "no message"
         diff = value - self._sa_balance
-        self._sa_log.append({
+        log_entry = {
             'date': self.current_date,
             'old_balance': self._sa_balance,
             'new_balance': value,
             'amount': diff,
             'type': 'inflow' if diff > 0 else 'outflow',
             'message': f'sa-{message}-{diff}'
-        })
+        }
+        self._sa_log.append(log_entry)
         self._sa_balance = value
         self._sa_message = message
 
+        # Save the log entry using multiprocessing
+        self.save_log_to_file(log_entry)
+
     @property
     def ma_balance(self):
-        return(  self._ma_balance,  self._ma_message)
+        return self._ma_balance, self._ma_message
 
     @ma_balance.setter
     def ma_balance(self, data):
@@ -116,20 +156,24 @@ class CPFAccount:
         else:
             value, message = data, "no message"
         diff = value - self._ma_balance
-        self._ma_log.append({
+        log_entry = {
             'date': self.current_date,
             'old_balance': self._ma_balance,
             'new_balance': value,
-            'amount': (diff),
+            'amount': diff,
             'type': 'inflow' if diff > 0 else 'outflow',
             'message': f'ma-{message}-{diff}'
-        })
+        }
+        self._ma_log.append(log_entry)
         self._ma_balance = value
         self._ma_message = message
 
+        # Save the log entry using multiprocessing
+        self.save_log_to_file(log_entry)
+
     @property
     def ra_balance(self):
-        return ( self._ra_balance, self._ra_message)
+        return self._ra_balance, self._ra_message
 
     @ra_balance.setter
     def ra_balance(self, data):
@@ -138,20 +182,24 @@ class CPFAccount:
         else:
             value, message = data, "no message"
         diff = value - self._ra_balance
-        self._ra_log.append({
+        log_entry = {
             'date': self.current_date,
             'old_balance': self._ra_balance,
             'new_balance': value,
-            'amount': (diff),
+            'amount': diff,
             'type': 'inflow' if diff > 0 else 'outflow',
             'message': f'ra-{message}-{diff}'
-        })
+        }
+        self._ra_log.append(log_entry)
         self._ra_balance = value
         self._ra_message = message
 
+        # Save the log entry using multiprocessing
+        self.save_log_to_file(log_entry)
+
     @property
     def excess_balance(self):
-        return (self._excess_balance, self._excess_message)
+        return self._excess_balance, self._excess_message
 
     @excess_balance.setter
     def excess_balance(self, data):
@@ -160,20 +208,24 @@ class CPFAccount:
         else:
             value, message = data, "no message"
         diff = value - self._excess_balance
-        self._excess_balance_log.append({
+        log_entry = {
             'date': self.current_date,
             'old_balance': self._excess_balance,
             'new_balance': value,
-            'amount': (diff),
+            'amount': diff,
             'type': 'inflow' if diff > 0 else 'outflow',
             'message': f'excess-{message}-{diff}'
-        })
+        }
+        self._excess_balance_log.append(log_entry)
         self._excess_balance = value
         self._excess_message = message
 
+        # Save the log entry using multiprocessing
+        self.save_log_to_file(log_entry)
+
     @property
     def loan_balance(self):
-        return   ( self._loan_balance, self._loan_message)
+        return self._loan_balance, self._loan_message
 
     @loan_balance.setter
     def loan_balance(self, data):
@@ -182,16 +234,24 @@ class CPFAccount:
         else:
             value, message = data, "no message"
         diff = value - self._loan_balance
-        self._loan_balance_log.append({
+        log_entry = {
             'date': self.current_date,
             'old_balance': self._loan_balance,
             'new_balance': value,
-            'amount': (diff),
+            'amount': diff,
             'type': 'outflow' if diff > 0 else 'inflow',
             'message': f'loan-{message}-{diff}'
-        })
+        }
+        self._loan_balance_log.append(log_entry)
         self._loan_balance = value
         self._loan_message = message
+
+        # Save the log entry using multiprocessing
+        self.save_log_to_file(log_entry)
+
+    def close(self):
+        """Ensure the log writer process is properly closed."""
+        self.close_log_writer()
 
     def set_balance(self, account_type, amount, metadata):
         setattr(self, f"{account_type}_balance", (amount, metadata))
@@ -203,25 +263,20 @@ class CPFAccount:
         current_balance = getattr(self, f'{account}_balance')  # Get the current balance
         new_balance = (current_balance[0] + change, message)  # Update balance and include message
         setattr(self, f'{account}_balance', new_balance)  # Set the updated balance
-        
+
     def transfer_to_ra(self):
         """Transfer OA and SA balances to RA at age 55, up to the Basic Retirement Sum (BRS).
         The remaining amount is transferred to the Excess Balance."""
-        # Step 1: Pay the Loan Balance in Full
-    
-       # self.excess_balance  = self._oa_balance + self._sa_balance
         self._excess_balance += self._oa_balance
         self._excess_balance += self._sa_balance
         self._ra_balance += config.get('retirement_sums', {}).get('brs', {}).get('amount', 0)
         self._excess_balance -= self._loan_balance
-        
-        
+
         self.update_balance('excess', self.oa_balance[0], 'transfer_oa_to_excess')
         self.update_balance('excess', self.sa_balance[0], 'transfer_sa_to_excess')
         self.update_balance('excess', self.loan_balance[0], 'loan_fully_paid')
         self.update_balance('ra', self.basic_retirement_sum, 'transfer_to_ra')
         self.update_balance('loan', -self.loan_balance[0], 'loan_fully_paid')
-
 
     def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: ConfigLoader) -> float:
         employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
@@ -239,22 +294,7 @@ class CPFAccount:
         name for name, value in inspect.getmembers(cls)
         if isinstance(value, property)
     ]
-            
-#    def record_inflow(self, account: str, amount: float, message: str = None):
-#        """Record inflow for a specific account."""
-#        if not isinstance(amount, (int, float)):
-#            raise ValueError(f"Expected amount to be a float or int, got {type(amount)}")
-#        self.inflow[f'{account}_balance'] += float(amount)
-#        self.update_balance(account=f"{account}", change=amount, message=message)
-#        
-#    def record_outflow(self, account: str, amount: float, message: str = None):
-#        """Record outflow for a specific account."""
-#        if not isinstance(amount, (int, float)):
-#            raise ValueError(f"Expected amount to be a float or int, got {type(amount)}")
-#        self.outflow[f'{account}_balance'] += float(amount)
-#        self.update_balance(account=f'{account}', change=-amount, message=message)
 
-            
     def get_age(self, current_date: datetime) -> int:
         """Calculate the age based on the current date and birth date."""
         birth_date = self.config.get('birth_date')
@@ -284,8 +324,6 @@ class CPFAccount:
             return employee_rate 
         else :
             return employer_rate
-    
-     
     
     def calculate_cpf_contribution(self, salary: float, age: int, is_employee: bool, config: ConfigLoader) -> float:
         """Calculates CPF contribution based on salary, age, and employment status."""
@@ -361,12 +399,6 @@ class CPFAccount:
         self.update_balance('sa', self._sa_balance * (sa_rate / 100 / 12), 'interest')
         self.update_balance('ma', self._ma_balance * (ma_rate / 100 / 12), 'interest')
         self.update_balance('ra', self._ra_balance * (ra_rate / 100 / 12), 'interest')
-        
-        
-      # self.record_inflow('oa', self._oa_balance * (oa_rate / 100 / 12), 'interest')
-      # self.record_inflow('sa', self._sa_balance * (sa_rate / 100 / 12), 'interest')
-      # self.record_inflow('ma', self._ma_balance * (ma_rate / 100 / 12), 'interest')
-      # self.record_inflow('ra', self._ra_balance * (ra_rate / 100 / 12), 'interest')
 
     def calculate_cpf_payout(self, age: int) -> float:
         """Calculates the CPF payout amount based on age and retirement sum."""
@@ -379,46 +411,6 @@ class CPFAccount:
             return brs_payout
         else:
             return 0.0  # No payout before payout age
-
-        
-#  def transfer_funds(self, from_account: str, to_account: str, amount: float, is_total_amount: bool = False, message: str = None):
-#      """Transfer funds from one account to another."""
-#      if is_total_amount:
-#          amount = getattr(self, f'{from_account}_balance')[0]  # Extract only the balance (first element of the tuple)
-#      self.record_outflow(from_account, amount, message=f'transfer-{from_account}-{amount}')
-#      self.record_inflow(to_account, amount, message=f'transfer-{to_account}-{amount}')
-        
-#   def transfer_to_ra(self):
-#       """Transfer OA and SA balances to RA at age 55, up to the Basic Retirement Sum (BRS).
-#       The remaining amount is transferred to the Excess Balance."""
-#       # Calculate total available funds from OA and SA
-#       total_funds = self._oa_balance + self._sa_balance - self._loan_balance
-#
-#       # Ensure loan balance is fully paid before transferring
-#       if self._loan_balance > 0:
-#           self.record_outflow('oa', self._loan_balance, 'loan_fully_paid')
-#           self._loan_balance = 0
-#
-#       # Transfer up to the Basic Retirement Sum (BRS) to RA
-#       brs = self.basic_retirement_sum
-#       transfer_to_ra = min(total_funds, brs)
-#       self.record_outflow('oa', min(self._oa_balance, transfer_to_ra), 'transfer_to_ra')
-#       transfer_to_ra -= min(self._oa_balance, transfer_to_ra)
-#       self.record_outflow('sa', transfer_to_ra, 'transfer_to_ra')
-#       self.record_inflow('ra', min(total_funds, brs), 'transfer_to_ra')
-#
-#       # Transfer the remaining funds to Excess Balance
-#       excess_balance = total_funds - brs
-#       if excess_balance > 0:
-#           self.record_outflow('oa', min(self._oa_balance, excess_balance), 'transfer_to_excess')
-#           excess_balance -= min(self._oa_balance, excess_balance)
-#           self.record_outflow('sa', excess_balance, 'transfer_to_excess')
-#           self.record_inflow('excess', total_funds - brs, 'transfer_to_excess')
-
-    def custom_serializer(self,obj):
-        if isinstance(obj, datetime):
-            return obj.strftime("%Y-%m-%d %H:%M:%S")  # Convert datetime to string
-        raise TypeError("Type not serializable")
 
     def get_date_dict(self, start_date=None, birth_date=None, end_date=None) -> dict:
         """
@@ -453,69 +445,6 @@ class CPFAccount:
         return date_dict
 
 
-
-# Updated generate_cpf_projection function
-#def generate_cpf_projection():
-#    config_loader = ConfigLoader('cpf_config.json')
-#    cpf = CPFAccount(config_loader)
-#    cpf.current_date = datetime.strptime(config_loader.get('start_date'), "%Y-%m-%d")
-#
-#    cpf.oa_balance = config_loader.get('oa_balance', 0)
-#    cpf.sa_balance = config_loader.get('sa_balance', 0)
-#    cpf.ma_balance = config_loader.get('ma_balance', 0)
-#    cpf.ra_balance = config_loader.get('ra_balance', 0)
-#    cpf.excess_balance = config_loader.get('excess_balance', 0)
-#    cpf.loan_balance = config_loader.get('loan_balance', 0)
-#
-#    cpf.basic_retirement_sum = config_loader.get('retirement_sums', {}).get('brs', {}).get('amount', 0)
-#    cpf.full_retirement_sum = config_loader.get('retirement_sums', {}).get('frs', {}).get('amount', 0)
-#    cpf.enhanced_retirement_sum = config_loader.get('retirement_sums', {}).get('ers', {}).get('amount', 0)
-#
-#    salary = config_loader.get('salary', 0)
-#
-#    print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
-#    print("-" * 150)
-#
-#    for month in range(1, 300):
-#        age = cpf.get_age(current_date=cpf.current_date)
-#
-#        # Loan payment logic
-#        loan_payments = config_loader.get('loan_payments', {})
-#        loan_payment = loan_payments.get('year_1_2', 0) if age < 24 else loan_payments.get('year_3', 0)
-#
-#        if age < 55:
-#            loan_payment = min(loan_payment, cpf.loan_balance[0])
-#            cpf.loan_balance = (calculate_loan_balance(cpf.loan_balance[0], interest_rate=2.5, monthly_payment=loan_payment, months=1), "loan_payment")
-#        elif age == 55:
-#            # Pay off the remaining loan balance at age 55
-#            remaining_loan = cpf.loan_balance[0]
-#            cpf.loan_balance = (0, "loan_fully_paid")
-#            cpf.record_outflow('oa', remaining_loan, 'loan_fully_paid')
-#
-#        # CPF Transfer of funds at the age of 55
-#        if age == 55:
-#            cpf.transfer_to_ra()
-#
-#        # CPF allocation logic
-#        for account in ['oa', 'ma', 'sa'] if age < 55 else ['oa', 'ma', 'ra']:
-#            allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)
-#            cpf.record_inflow(account=account, amount=allocation, message=f'allocation_{account}')
-#
-#        # Apply interest at the end of the year
-#        if cpf.current_date.month == 12:
-#            cpf.apply_interest(age=age)
-#
-#        # CPF payout
-#        cpf_payout = cpf.calculate_cpf_payout(age=age)
-#        cpf.record_inflow(account='excess', amount=cpf_payout, message=f'cpf_payout_{age}')
-#
-#        # Display balances
-#        print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
-#
-#        # Move to the next month
-#        cpf.current_date += timedelta(days=30)
-
-
 def calculate_loan_balance(principal: float, interest_rate: float, monthly_payment: float, months: int) -> float:
     for _ in range(months):
         interest = principal * (interest_rate / 12 / 100)
@@ -526,4 +455,17 @@ def calculate_loan_balance(principal: float, interest_rate: float, monthly_payme
 
 
 if __name__ == "__main__":
-    generate_cpf_projection()
+    # Initialize CPFAccount
+    cpf = CPFAccount(config_loader=ConfigLoader('cpf_config.json'))
+
+    # Update balances
+    cpf.sa_balance = (1000, "Initial SA balance")
+    cpf.oa_balance = (2000, "Initial OA balance")
+
+    # Perform some operations
+    cpf.sa_balance = (1500, "SA inflow")
+    cpf.oa_balance = (1800, "OA outflow")
+
+    # Close the log writer process
+    cpf.close()
+
