@@ -13,10 +13,6 @@ from collections import OrderedDict
 config = ConfigLoader('cpf_config.json')
 
 
-
-
-
-
 class CPFAccount:
     def __init__(self, config_loader: ConfigLoader):  # Accept config_loader
         self.config = config_loader  # Store the config_loader instance

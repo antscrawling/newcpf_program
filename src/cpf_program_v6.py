@@ -157,7 +157,7 @@ class CPFAccount:
 
     def update_balance(self, account, amount, message):
         """Update account balance and log the change."""
-        current_balance, _ = getattr(self, f"{account}_balance")
+        current_balance, _ = getattr(self, f"_{account}_balance")
         setattr(self, f"{account}_balance", (current_balance + amount, message))
 
     def calculate_cpf_allocation(self, age, salary, account, config):
