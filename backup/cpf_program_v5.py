@@ -1,204 +1,416 @@
-# cpf_program4_v2.py
-import math
-from datetime import datetime
-from config_loader_v2 import ConfigLoader
-from date_generator_v2 import generate_date_dict
-from data_saver_v2 import save_results
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+from dateutil.relativedelta import relativedelta
+from pprint import pprint
+#from dateutility import  MyDateDictGenerator
+import json
+from import_config import get_the_config
+from convert_date import MyDateTime
+from collections import OrderedDict
 
-def run_simulation(config_path: str = 'config.json', output_format: str = 'pickle'):
-    """Run the CPF simulation using the given config, save results in specified format."""
-    # Load configuration from JSON
-    loader = ConfigLoader(config_path)
-    config = loader.data
+# Load configuration
+config = get_the_config()
 
-    # Generate the monthly date dictionary for the simulation timeline
-    start_date = config['START_DATE']
-    end_date = config['END_DATE']
-    date_dict = generate_date_dict(start_date, end_date)
-    total_months = len(date_dict)
 
-    # Extract frequently used config values for quick access
-    salary_cap = config.get('SALARY_CAP', math.inf)
-    salary = config.get('SALARY', 0)
-    # Contribution allocation fractions
-    alloc_below_55 = config.get('SALARY_ALLOCATION_BELOW_55', {})
-    alloc_above_55 = config.get('SALARY_ALLOCATION_ABOVE_55', {})
-    sum_alloc_below_55 = sum(alloc_below_55.values())
-    sum_alloc_above_55 = sum(alloc_above_55.values())
-    # CPF contribution rates by age group (employee + employer)
-    contribution_rates = config.get('CPF_CONTRIBUTION_RATES', {})
-    # Base interest rates
-    OA_rate_below_55 = config.get('OA_INTEREST_RATE_BELOW_55', 0)
-    OA_rate_above_55 = config.get('OA_INTEREST_RATE_ABOVE_55', 0)
-    SA_rate = config.get('SA_INTEREST_RATE', 0)
-    MA_rate = config.get('MA_INTEREST_RATE', 0)
-    RA_rate = config.get('RA_INTEREST_RATE', 0)
-    # Extra interest rates
-    extra_rate_below_55 = config.get('EXTRA_INTEREST_BELOW_55', 0)
-    extra_rate_first30_above55 = config.get('EXTRA_INTEREST_FIRST_30K_ABOVE_55', 0)
-    extra_rate_next30_above55 = config.get('EXTRA_INTEREST_NEXT_30K_ABOVE_55', 0)
-    # Retirement sums and payout configuration
-    brs_amount = config.get('BASIC_RETIREMENT_SUM', {}).get('amount', 0)
-    frs_amount = config.get('FULL_RETIREMENT_SUM', {}).get('amount', 0)
-    ers_amount = config.get('ENHANCED_RETIREMENT_SUM', {}).get('amount', 0)
-    cpf_payment_amount = config.get('CPF_PAYMENT_AMOUNT', 0)
-    # Decide which retirement sum target to use based on chosen payout
-    target_ra_sum = brs_amount
-    if math.isclose(cpf_payment_amount, config.get('CPF_PAYOUT_AMOUNT_FRS', -1), rel_tol=1e-9):
-        target_ra_sum = frs_amount
-    elif math.isclose(cpf_payment_amount, config.get('CPF_PAYOUT_AMOUNT_ERS', -1), rel_tol=1e-9):
-        target_ra_sum = ers_amount
-    else:
-        target_ra_sum = brs_amount  # default to BRS
+globals().update({
+    k: v if isinstance(v, list) and len(v) == 3 and all(isinstance(i, int) for i in v)
+    else v
+    for k, v in config.items()
+})
 
-    # Prepare milestone dates from birth date
-    birth_date = config['BIRTH_DATE']
-    brs_transfer_date = config.get('AGE_FOR_BRS_TRANSFER_DATE', datetime(birth_date.year+55, birth_date.month, birth_date.day))
-    cpf_payout_date = datetime(birth_date.year + config.get('AGE_FOR_CPF_PAYOUT', 67),
-                               birth_date.month, birth_date.day)
 
-    # Initialize account balances (could be extended to take initial balances from config if provided)
-    OA_balance = SA_balance = MA_balance = RA_balance = 0.0
-    brs_transfer_done = False
-    payout_started = False
+# Updated CPFAccount class with parameterized logic
 
-    results = []  # to collect results each month
+class CPFAccount:
+    def __init__(self):
+        self.current_date = datetime.now()
+        self._oa_balance = 0.0
+        self._oa_log = []
+        self._oa_message = ""
 
-    for month_idx in range(total_months):
-        current_date = date_dict[month_idx]
-        # Compute current age in years
-        age_years = current_date.year - birth_date.year
-        if (current_date.month, current_date.day) < (birth_date.month, birth_date.day):
-            age_years -= 1
+        self._sa_balance = 0.0
+        self._sa_log = []
+        self._sa_message = ""
 
-        # **Age 55 event** – Transfer to RA if not done and reaching 55th birthday
-        if not brs_transfer_done and current_date >= brs_transfer_date:
-            amount_needed = target_ra_sum
-            # Transfer from SA then OA to Retirement Account (RA)
-            transfer_from_SA = min(SA_balance, amount_needed)
-            SA_balance -= transfer_from_SA; amount_needed -= transfer_from_SA
-            transfer_from_OA = min(OA_balance, amount_needed)
-            OA_balance -= transfer_from_OA; amount_needed -= transfer_from_OA
-            RA_balance += (transfer_from_SA + transfer_from_OA)
-            brs_transfer_done = True
+        self._ma_balance = 0.0
+        self._ma_log = []
+        self._ma_message = ""
 
-        # Determine contribution rates bracket by age
-        if age_years < 55:
-            bracket = 'below_55'; fractions = alloc_below_55; frac_sum = sum_alloc_below_55
-        elif age_years < 60:
-            bracket = '55_to_60'; fractions = alloc_above_55; frac_sum = sum_alloc_above_55
-        elif age_years < 65:
-            bracket = '60_to_65'; fractions = alloc_above_55; frac_sum = sum_alloc_above_55
-        elif age_years < 70:
-            bracket = '65_to_70'; fractions = alloc_above_55; frac_sum = sum_alloc_above_55
+        self._ra_balance = 0.0
+        self._ra_log = []
+        self._ra_message = ""
+
+        self._excess_balance = 0.0
+        self._excess_balance_log = []
+        self._excess_message = ""
+
+        self.basic_retirement_sum = 0.0
+        
+        self._loan_balance = 0.0
+        self._loan_balance_log = []
+        self._loan_message = ""
+        
+        
+        self.inflow = {'loan_balance': 0.0,
+                       'excess_balance': 0.0,
+                       'oa_balance': 0.0,
+                       'sa_balance': 0.0,
+                       'ma_balance': 0.0,
+                       'ra_balance': 0.0}
+        self.outflow = {'loan_balance': 0.0,
+                        'excess_balance': 0.0,
+                        'oa_balance': 0.0,
+                        'sa_balance': 0.0,
+                        'ma_balance': 0.0,
+                        'ra_balance': 0.0}
+
+    @property
+    def oa_balance(self):
+        return (self._oa_balance, self._oa_message)
+
+    @oa_balance.setter
+    def oa_balance(self, data):
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, message = data
         else:
-            bracket = 'above_70'; fractions = alloc_above_55; frac_sum = sum_alloc_above_55
-
-        rates = contribution_rates.get(bracket, {"employee": 0.0, "employer": 0.0})
-        combined_rate = rates["employee"] + rates["employer"]
-        wage_effective = min(salary, salary_cap)  # cap the salary for CPF computation
-        total_contribution = combined_rate * wage_effective
-        # Allocate contributions to accounts (OA, SA/RA, MA) based on fraction distribution
-        if frac_sum == 0:
-            contribution_to_accounts = {"oa": 0.0, "sa": 0.0, "ra": 0.0, "ma": 0.0}
-        else:
-            contribution_to_accounts = {acc: total_contribution * (frac / frac_sum) 
-                                        for acc, frac in fractions.items()}
-        # Update balances with contributions
-        OA_balance += contribution_to_accounts.get("oa", 0.0)
-        SA_balance += contribution_to_accounts.get("sa", 0.0)
-        MA_balance += contribution_to_accounts.get("ma", 0.0)
-        RA_balance += contribution_to_accounts.get("ra", 0.0)
-
-        # Deduct monthly housing loan payment from OA
-        m_count = month_idx + 1  # month count (1-indexed for easier year grouping)
-        if m_count <= 24:
-            loan_payment = config.get('LOAN_PAYMENT_YEAR_1_2', 0.0)
-        elif m_count <= 36:
-            loan_payment = config.get('LOAN_PAYMENT_YEAR_3', 0.0)
-        else:
-            loan_payment = config.get('LOAN_PAYMENT_YEAR_4_BEYOND', 0.0)
-        if loan_payment:
-            if OA_balance >= loan_payment:
-                OA_balance -= loan_payment
-            else:
-                OA_balance = 0.0  # if OA insufficient, assume remainder paid externally (not modeled)
-
-        # Calculate monthly interest for each account
-        oa_rate = OA_rate_below_55 if age_years < 55 else OA_rate_above_55
-        OA_interest = OA_balance * (oa_rate / 100.0) / 12.0
-        SA_interest = SA_balance * (SA_rate / 100.0) / 12.0
-        MA_interest = MA_balance * (MA_rate / 100.0) / 12.0
-        RA_interest = RA_balance * (RA_rate / 100.0) / 12.0
-
-        # Calculate extra interest (1% on first 60k combined, +1% on first 30k for 55+)
-        total_balance = OA_balance + SA_balance + MA_balance + RA_balance
-        OA_extra = SA_extra = MA_extra = RA_extra = 0.0
-        if age_years < 55:
-            # Extra 1% on up to 60k of combined balances (max 20k of OA)
-            cap = 60000.0
-            allowed_OA = min(OA_balance, 20000.0)
-            pool = min(total_balance, cap)
-            oa_part = min(allowed_OA, pool); pool -= oa_part
-            sa_part = min(SA_balance, pool); pool -= sa_part
-            ma_part = min(MA_balance, pool); pool -= ma_part
-            # extra interest applied
-            OA_extra = oa_part * (extra_rate_below_55/100.0) / 12.0
-            SA_extra = sa_part * (extra_rate_below_55/100.0) / 12.0
-            MA_extra = ma_part * (extra_rate_below_55/100.0) / 12.0
-            RA_extra = 0.0
-        else:
-            # Extra interest for 55 and above:
-            # 1.5% on first 30k (in config), 1.0% on next 30k
-            first_band = 30000.0; second_band = 30000.0
-            band1_pool = min(total_balance, first_band)
-            allowed_OA = min(OA_balance, 20000.0)
-            # allocate first 30k across accounts (respect OA cap 20k)
-            oa_part1 = min(allowed_OA, band1_pool); band1_pool -= oa_part1
-            ra_part1 = min(RA_balance, band1_pool); band1_pool -= ra_part1
-            sa_part1 = min(SA_balance, band1_pool); band1_pool -= sa_part1
-            ma_part1 = min(MA_balance, band1_pool); band1_pool -= ma_part1
-            # allocate next 30k across accounts (OA already capped, exclude OA)
-            band2_pool = 0.0
-            if total_balance > first_band:
-                band2_pool = min(total_balance - first_band, second_band)
-            ra_part2 = min(max(RA_balance - ra_part1, 0.0), band2_pool); band2_pool -= ra_part2
-            sa_part2 = min(max(SA_balance - sa_part1, 0.0), band2_pool); band2_pool -= sa_part2
-            ma_part2 = min(max(MA_balance - ma_part1, 0.0), band2_pool); band2_pool -= ma_part2
-            # compute extra interest for each account part
-            OA_extra = oa_part1 * (extra_rate_first30_above55/100.0) / 12.0
-            RA_extra = (ra_part1 * (extra_rate_first30_above55/100.0) + ra_part2 * (extra_rate_next30_above55/100.0)) / 12.0
-            SA_extra = (sa_part1 * (extra_rate_first30_above55/100.0) + sa_part2 * (extra_rate_next30_above55/100.0)) / 12.0
-            MA_extra = (ma_part1 * (extra_rate_first30_above55/100.0) + ma_part2 * (extra_rate_next30_above55/100.0)) / 12.0
-
-        # Apply interest to balances
-        OA_balance += OA_interest + OA_extra
-        SA_balance += SA_interest + SA_extra
-        MA_balance += MA_interest + MA_extra
-        RA_balance += RA_interest + RA_extra
-
-        # **Age 67 event** – Start CPF retirement payouts from RA
-        if not payout_started and current_date >= cpf_payout_date:
-            payout_started = True
-        if payout_started and cpf_payment_amount > 0:
-            # Deduct monthly payout from RA (ensure it doesn't go negative)
-            RA_balance = RA_balance - cpf_payment_amount if RA_balance >= cpf_payment_amount else 0.0
-
-        # Record the month’s results
-        results.append({
-            "month_index": month_idx,
-            "date": current_date.strftime("%Y-%m-%d"),
-            "age": age_years,
-            "OA_balance": round(OA_balance, 2),
-            "SA_balance": round(SA_balance, 2),
-            "MA_balance": round(MA_balance, 2),
-            "RA_balance": round(RA_balance, 2)
+            value, message = data, "no message"
+        diff = value - self._oa_balance
+        self._oa_log.append({
+            'date': self.current_date,
+            'amount': abs(diff),
+            'type': 'inflow' if diff > 0 else 'outflow',
+            'message': f'oa-{message}-{diff}'
         })
+        self._oa_balance = value
+        self._oa_message = message
 
-    # Save all results at once in the desired format (binary by default for efficiency)
-    output_file = f"cpf_simulation_results.{ 'pkl' if output_format.lower()=='pickle' else output_format }"
-    save_results(results, output_file, format=output_format)
-    return results
+    @property
+    def sa_balance(self):
+        return ( self._sa_balance,self._sa_message)
+
+    @sa_balance.setter
+    def sa_balance(self, data):
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, message = data
+        else:
+            value, message = data, "no message"
+        diff = value - self._sa_balance
+        self._sa_log.append({
+            'date': self.current_date,
+            'amount': abs(diff),
+            'type': 'inflow' if diff > 0 else 'outflow',
+            'message': f'sa-{message}-{diff}'
+        })
+        self._sa_balance = value
+        self._sa_message = message
+
+    @property
+    def ma_balance(self):
+        return(  self._ma_balance,  self._ma_message)
+
+    @ma_balance.setter
+    def ma_balance(self, data):
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, message = data
+        else:
+            value, message = data, "no message"
+        diff = value - self._ma_balance
+        self._ma_log.append({
+            'date': self.current_date,
+            'amount': abs(diff),
+            'type': 'inflow' if diff > 0 else 'outflow',
+            'message': f'ma-{message}-{diff}'
+        })
+        self._ma_balance = value
+        self._ma_message = message
+
+    @property
+    def ra_balance(self):
+        return ( self._ra_balance, self._ra_message)
+
+    @ra_balance.setter
+    def ra_balance(self, data):
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, message = data
+        else:
+            value, message = "no message"
+        diff = value - self._ra_balance
+        self._ra_log.append({
+            'date': self.current_date,
+            'amount': abs(diff),
+            'type': 'inflow' if diff > 0 else 'outflow',
+            'message': f'ra-{message}-{diff}'
+        })
+        self._ra_balance = value
+        self._ra_message = message
+
+    @property
+    def excess_balance(self):
+        return (self._excess_balance, self._excess_message)
+
+    @excess_balance.setter
+    def excess_balance(self, data):
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, message = data
+        else:
+            value, message = data, "no message"
+        diff = value - self._excess_balance
+        self._excess_balance_log.append({
+            'date': self.current_date,
+            'amount': abs(diff),
+            'type': 'inflow' if diff > 0 else 'outflow',
+            'message': f'excess-{message}-{diff}'
+        })
+        self._excess_balance = value
+        self._excess_message = message
+
+    @property
+    def loan_balance(self):
+        return   ( self._loan_balance, self._loan_message)
+
+    @loan_balance.setter
+    def loan_balance(self, data):
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, message = data
+        else:
+            value, message = data, "no message"
+        diff = value - self._loan_balance
+        self._loan_balance_log.append({
+            'date': self.current_date,
+            'amount': abs(diff),
+            'type': 'outflow' if diff > 0 else 'inflow',
+            'message': f'loan-{message}-{diff}'
+        })
+        self._loan_balance = value
+        self._loan_message = message
+
+
+
+    def update_balance(self, account: str, change: float, message: str = None):
+        """Wrapper function to update account balances and log changes."""
+        if not isinstance(change, (int, float)):
+            raise ValueError(f"Expected change to be a float or int, got {type(change)}")
+        current_balance = getattr(self, f'{account}_balance')  # Get the current balance
+        new_balance = (current_balance[0] + change, message)  # Update balance and include message
+        setattr(self, f'{account}_balance', new_balance)  # Set the updated balance
+        
+        
+    def record_inflow(self, account: str, amount: float, message: str = None):
+        """Record inflow for a specific account."""
+        if not isinstance(amount, (int, float)):
+            raise ValueError(f"Expected amount to be a float or int, got {type(amount)}")
+        self.inflow[f'{account}_balance'] += float(amount)
+        self.update_balance(account=f"{account}", change=amount, message=message)
+        
+    def record_outflow(self, account: str, amount: float, message: str = None):
+        """Record outflow for a specific account."""
+        if not isinstance(amount, (int, float)):
+            raise ValueError(f"Expected amount to be a float or int, got {type(amount)}")
+        self.outflow[f'{account}_balance'] += float(amount)
+        self.update_balance(account=f'{account}', change=-amount, message=message)
+
+            
+    def get_age(self, current_date:datetime) -> int:
+        # Calculate the age based on the current date and birth date
+        return DATE_DICT.get(current_date.strftime("%b-%Y"))['age']
+    
+    def get_cpf_contribution_rate(self, age:int,is_employee:bool)-> float:
+        if age < 55:
+            employee_rate : float = CPF_CONTRIBUTION_RATES["below_55"]["employee"]
+            employer_rate : float = CPF_CONTRIBUTION_RATES["below_55"]["employer"]
+        elif 55 <= age < 60:
+            employee_rate : float  = CPF_CONTRIBUTION_RATES["55_to_60"]["employee"]
+            employer_rate : float  = CPF_CONTRIBUTION_RATES["55_to_60"]["employer"]
+        elif 60 <= age < 65:
+            employee_rate : float  = CPF_CONTRIBUTION_RATES["60_to_65"]["employee"]
+            employer_rate : float  = CPF_CONTRIBUTION_RATES["60_to_65"]["employer"]
+        elif 65 <= age < 70:
+            employee_rate : float = CPF_CONTRIBUTION_RATES["65_to_70"]["employee"]
+            employer_rate : float = CPF_CONTRIBUTION_RATES["65_to_70"]["employer"]
+        else:
+            employee_rate : float = CPF_CONTRIBUTION_RATES["above_70"]["employee"]
+            employer_rate : float = CPF_CONTRIBUTION_RATES["above_70"]["employer"]
+        if is_employee:
+            return employee_rate 
+        else :
+            return employer_rate
+    
+     
+    
+    def calculate_cpf_contribution(self, salary:float,age:int, is_employee:bool) -> float:
+        capped_salary : float = min(salary, SALARY_CAP)
+        employee_rate : float = self.get_cpf_contribution_rate(age=age,is_employee=True)    
+        employer_rate : float = self.get_cpf_contribution_rate(age=age,is_employee=False)
+        employee_contribution = capped_salary * employee_rate
+        employer_contribution = capped_salary * employer_rate
+        if is_employee:
+           
+            return employee_contribution 
+        else:
+            return employer_contribution
+       
+    def calculate_cpf_allocation(self, age:int,salary:float,account:str)-> float:
+        employee : float  = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True)
+        employer : float  = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False)
+        alloc: float = 0.0  # Initialize alloc with a default value
+        # Determine allocation based on age and account type                                   
+        if account in ['oa', 'ma','sa'] and age < AGE_FOR_BRS_TRANSFER['age']:
+           
+                # This is July month of 2029.  get the below 55 rate
+                alloc = SALARY_ALLOCATION_BELOW_55[account] * (employee + employer)
+        else:
+                alloc = SALARY_ALLOCATION_ABOVE_55[account] * (employee + employer)
+        return alloc
+                                                                                                                                                                                                                                                                    
+    def apply_interest(self, age):
+        oa_interest_rate = OA_INTEREST_RATE_BELOW_55 if age < AGE_FOR_BRS_TRANSFER['age'] else OA_INTEREST_RATE_ABOVE_55
+        interest_rates = [oa_interest_rate, SA_INTEREST_RATE, RA_INTEREST_RATE, MA_INTEREST_RATE]
+        accounts = ['oa', 'sa', 'ra', 'ma']
+        balances = [self.oa_balance, self.sa_balance, self.ra_balance, self.ma_balance]
+
+        for account, balance, rate in zip(accounts, balances, interest_rates):
+            self.record_inflow(account, balance[0] * rate / 100, message=f'{account}_interest')
+
+        self.apply_extra_interest(age)
+        
+        
+    def apply_extra_interest(self, age):
+        combined_balance = min(self.oa_balance[0], 20_000) + self.sa_balance[0] + self.ma_balance[0]
+        if age >= AGE_FOR_BRS_TRANSFER['age']:
+            combined_balance += self.ra_balance[0]
+
+        if combined_balance >= 30_000:
+            first_30k = min(combined_balance, 30_000)
+            extra_interest_first_30k = first_30k * EXTRA_INTEREST_FIRST_30K_ABOVE_55 / 100
+            self.record_inflow(account='ra', amount=extra_interest_first_30k, message='extra_first30k_interest')
+
+        if combined_balance >= 60_000:
+            extra_interest_next_30k = (combined_balance - 30_000) * EXTRA_INTEREST_NEXT_30K_ABOVE_55 / 100
+            self.record_inflow(account='ra', amount=extra_interest_next_30k, message='extra_next30k_interest')
+
+   
+   
+
+    def calculate_cpf_payout(self, age):
+        return CPF_PAYOUT_AMOUNT_BRS if age >= AGE_FOR_CPF_PAYOUT else 0
+
+        
+    def transfer_funds(self, from_account: str, to_account: str, amount: float, is_total_amount: bool = False, message: str = None):
+        """Transfer funds from one account to another."""
+        if is_total_amount:
+            amount = getattr(self, f'{from_account}_balance')[0]  # Extract only the balance (first element of the tuple)
+        self.record_outflow(from_account, amount, message=f'transfer-{from_account}-{amount}')
+        self.record_inflow(to_account, amount, message=f'transfer-{to_account}-{amount}')
+        
+        
+
+    def custom_serializer(self,obj):
+        if isinstance(obj, datetime):
+            return obj.strftime("%Y-%m-%d %H:%M:%S")  # Convert datetime to string
+        raise TypeError("Type not serializable")
+
+    def get_date_dict(self, start_date=None, birth_date=None, end_date=None) -> dict:
+        """
+        Returns a dictionary of the form:
+        {
+            'Apr-2025': {'age': 50},
+            'May-2025': {'age': 50},
+            ...
+        }
+        """
+        if isinstance(start_date, list):
+            start_date = datetime(start_date[0], start_date[1], start_date[2])
+        if isinstance(birth_date, list):
+            birth_date = datetime(birth_date[0], birth_date[1], birth_date[2])
+        if isinstance(end_date, list):
+            end_date = datetime(end_date[0], end_date[1], end_date[2])
+
+        total_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+
+        date_dict = OrderedDict(
+            (
+                (date := start_date + relativedelta(months=i)).strftime('%b-%Y'),
+                {
+                    "age": date.year - birth_date.year - (
+                        1 if (date.month < birth_date.month or (date.month == birth_date.month and date.day < birth_date.day)) else 0
+                    )
+                }
+            )
+            for i in range(total_months)
+        )
+
+        return date_dict
+
+# Updated generate_cpf_projection function
+def generate_cpf_projection():
+    cpf = CPFAccount()
+    cpf.oa_balance = 167892.11,'initial'
+    cpf.sa_balance = 253163.35,'initial'
+    cpf.ma_balance = 72952.37,'initial'
+    cpf.ra_balance = 0.00,'initial'
+    cpf.excess_balance = 0.00,'initial'
+    cpf.loan_balance = 251101.00,'initial'
+    cpf.basic_retirement_sum = BASIC_RETIREMENT_SUM['amount']
+
+    print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
+    print("-" * 150)
+
+    records = []
+    for month in range(1, 300):
+        age = cpf.get_age(current_date=cpf.current_date)
+
+        # Loan payment logic
+        if cpf.current_date.year <= 2029 and cpf.current_date.month < 7:
+            loan_payment = LOAN_PAYMENT_YEAR_1_2 if month < 24 else LOAN_PAYMENT_YEAR_3 if month < 36 else LOAN_PAYMENT_YEAR_4_BEYOND
+            loan_payment = min(loan_payment, cpf.loan_balance[0])
+            cpf.loan_balance = (calculate_loan_balance(cpf.loan_balance[0], interest_rate=2.5, monthly_payment=loan_payment, months=1), "loan_payment")
+
+        # CPF allocation logic
+        for account in ['oa', 'ma', 'sa'] if age < AGE_FOR_BRS_TRANSFER['age'] else ['oa', 'ma', 'ra']:
+            allocation = cpf.calculate_cpf_allocation(age=age, salary=SALARY, account=account)
+            cpf.record_inflow(account=account, amount=allocation, message=f'allocation_{account}')
+
+        # Apply interest at the end of the year
+        if cpf.current_date.month == 12:
+            cpf.apply_interest(age=age)
+
+        # CPF payout
+        cpf_payout = cpf.calculate_cpf_payout(age=age)
+        cpf.record_inflow(account='excess', amount=cpf_payout, message=f'cpf_payout_{age}')
+
+        # Display balances
+        print(f"{cpf.current_date.strftime('%b-%Y'):<15}{age:<5}{cpf.oa_balance[0]:<15,.2f}{cpf.sa_balance[0]:<15,.2f}{cpf.ma_balance[0]:<15,.2f}{cpf.ra_balance[0]:<15,.2f}{cpf.loan_balance[0]:<12,.2f}{cpf.excess_balance[0]:<12,.2f}{cpf_payout:<12,.2f}")
+
+        # Save record for JSON
+#        records.append({
+#            "date": cpf.custom_serializer(cpf.current_date),
+#            "age": age,
+#            "oa_balance": cpf.oa_balance,
+#            "sa_balance": cpf.sa_balance,
+#            "ma_balance": cpf.ma_balance,
+#            "ra_balance": cpf.ra_balance,
+#            "loan_balance": cpf.loan_balance,
+#            "excess_balance": cpf.excess_balance,
+#        })
+
+        # Move to the next month
+        cpf.current_date += timedelta(days=30)
+
+  ## Save records to JSON
+  #with open("cpf_projection.json", "w") as json_file:
+  #    json.dump(records, json_file, indent=4, default=cpf.custom_serializer)
+
+  #print("Projection saved to cpf_projection.json")
+
+
+def calculate_loan_balance(principal: float, interest_rate: float, monthly_payment: float, months: int) -> float:
+    for _ in range(months):
+        interest = principal * (interest_rate / 12 / 100)
+        principal = principal + interest - monthly_payment
+        if principal <= 0:
+            return 0.0
+    return principal
+
 
 if __name__ == "__main__":
-    run_simulation()
+    generate_cpf_projection()
