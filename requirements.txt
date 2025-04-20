@@ -1,5 +1,6 @@
 python-dateutil
 striprtf
+tqdm
 
 numpy
 pandas

@@ -14,7 +14,7 @@ def run_simulation(config_path: str = None, output_format: str = 'pickle'):
 
     # Import modules after adding the project root to the path
     from src.cpf_config_loader_v2 import ConfigLoader
-    from src.reconfigure_date import MyDateTime
+    from src.cpf_reconfigure_date_v2 import MyDateTime
     from src.cpf_date_generator_v2 import generate_date_dict
     from src.cpf_data_saver_v2 import save_results
 

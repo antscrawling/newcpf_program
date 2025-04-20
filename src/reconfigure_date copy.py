@@ -111,7 +111,7 @@ class MyDateTime:
                     # Detect and correct the day
                     day = self.detect_day(day, month, int(year))
 
-                    return datetime(int(year), month, day)
+                    return date(int(year), month, day)
                 except Exception as e:
                     if len(parts[0]) > 4:
                         # Handle cases like "January 15, 2023"
@@ -122,7 +122,7 @@ class MyDateTime:
                         # Detect and correct the day
                         day = self.detect_day(day, month, year)
                         
-                        return datetime(year, month, day)
+                        return date(year, month, day)
                     return self.mydate
 
             # If all parsing attempts fail, raise an error

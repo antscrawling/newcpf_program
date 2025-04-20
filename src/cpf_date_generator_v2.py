@@ -7,6 +7,12 @@ def generate_date_dict(start_date, end_date, birth_date):
     """
     Generates a dictionary of dates with start/end of month and age.
     Expects input dates are datetime.date objects.
+    date_dict[date_key] = {
+    # Ensure period_start isn't before the actual simulation start_d
+    'period_start': max(period_start, start_date),
+    'period_end': period_end,
+    'age': age_at_period_end
+}
     """
     # Input validation (optional but good practice)
     if not isinstance(start_date, date) or isinstance(start_date, datetime):

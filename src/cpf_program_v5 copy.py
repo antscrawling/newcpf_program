@@ -440,6 +440,10 @@ def generate_cpf_projection():
 
         # CPF Transfer of funds at the age of 55
         if age == 55:
+            
+            
+            
+            
             cpf.transfer_to_ra()
 
         # CPF allocation logic

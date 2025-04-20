@@ -77,7 +77,7 @@ class ConfigLoader:
             
 # Example usage
 if __name__ == "__main__":
-    config_loader = ConfigLoader('cpf_config.json')
+    config_loader = ConfigLoader('new__config.json')
     print(config_loader.get('START_DATE'))
     config_loader.set('NEW_KEY', 'New Value')
     config_loader.save('new_config.json')
