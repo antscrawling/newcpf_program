@@ -121,9 +121,8 @@ def main():
                   f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
                   f"{float(cpf_payout):<12,.2f}")
         
+            
 
 if __name__ == "__main__":
-    import os
-    import json
     main()
 

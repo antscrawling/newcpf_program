@@ -173,7 +173,7 @@ class CPFAccount:
     def get_date_dict(self, start_date, end_date, birth_date):
         """Generate a date dictionary."""
         print("Warning: get_date_dict needs implementation in CPFAccount or be imported correctly.")
-        from cpf_date_generator_v2 import generate_date_dict
+        from archive.cpf_date_generator_v2 import generate_date_dict
         return generate_date_dict(start_date, end_date, birth_date)
 
     def update_balance(self, account: str, new_balance: float, message: str):
