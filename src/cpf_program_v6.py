@@ -19,19 +19,26 @@ config = ConfigLoader('cpf_config.json')
 # Define the worker function at the top level (outside the class)
 def _save_log_worker(queue, filename):
     """Worker process to save logs to a file."""
+    # Ensure 'a' for append mode is used here!
     with open(filename, 'a') as file:
         while True:
             try:
-                log_entry = queue.get(timeout=1)  # Wait for a log entry with a timeout
+                # Use a timeout to prevent blocking indefinitely if main process dies
+                log_entry = queue.get(timeout=1)
                 if log_entry == "STOP":
+                    print("Log worker received STOP signal.") # Debug print
                     break
                 # Use the top-level serializer function
                 file.write(json.dumps(log_entry, default=custom_serializer) + '\n')
-            except Exception:  # Consider more specific exception handling (e.g., queue.Empty)
-                # Handle timeout or other exceptions gracefully
-                # Check if the queue is empty after timeout before continuing
-                if queue.empty():
-                    continue
+                file.flush() # Ensure data is written promptly
+            except Empty:
+                # Queue is empty, continue waiting
+                continue
+            except Exception as e:
+                print(f"Error in log worker: {e}") # Log errors in the worker
+                # Decide if you want to break or continue on other errors
+                break # Example: Stop worker on unexpected errors
+        print("Log worker finished writing.") # Debug print
 
 # Define the custom serializer at the top level or as a static method
 def custom_serializer(obj):
@@ -111,22 +118,38 @@ class CPFAccount:
             # Optionally, try restarting it or log to stderr
 
     def close_log_writer(self):
-        """Stop the log writer process."""
-        # Check if the process exists and is alive before trying to stop it
+        """Stop the log writer process gracefully."""
+        print("Attempting to close log writer...") # Debug print
         if hasattr(self, 'log_process') and self.log_process.is_alive():
-            try:
-                self.log_queue.put("STOP")  # Send the stop signal
-                self.log_process.join(timeout=5)  # Wait for the process to terminate
-                if self.log_process.is_alive():
-                    # If it's still alive after timeout, terminate it forcefully
-                    self.log_process.terminate()
-                    self.log_process.join()  # Wait for termination
-            except Exception as e:
-                print(f"Error closing log writer: {e}")  # Log potential errors during shutdown
-        # Clean up queue reference
+             try:
+                 print("Putting STOP signal in queue...") # Debug print
+                 self.log_queue.put("STOP")
+                 # Wait for the worker to process the queue (increase timeout if needed)
+                 print("Joining log process...") # Debug print
+                 self.log_process.join(timeout=10) # Increased timeout to 10 seconds
+
+                 if self.log_process.is_alive():
+                     print("Log process did not exit after timeout, terminating...") # Debug print
+                     self.log_process.terminate() # Force terminate if join times out
+                     self.log_process.join() # Wait for termination
+                 else:
+                     print("Log process joined successfully.") # Debug print
+
+             except Exception as e:
+                 print(f"Error closing log writer process: {e}")
+        else:
+             print("Log process not found or not alive.") # Debug print
+
+        # Close the queue itself after the process is confirmed dead
         if hasattr(self, 'log_queue'):
-            self.log_queue.close()
-            self.log_queue.join_thread()
+             try:
+                 print("Closing log queue...") # Debug print
+                 self.log_queue.close()
+                 # This ensures the queue's background thread finishes
+                 self.log_queue.join_thread()
+                 print("Log queue closed.") # Debug print
+             except Exception as e:
+                 print(f"Error closing log queue: {e}")
 
     @property
     def sa_balance(self):
