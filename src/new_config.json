@@ -5,7 +5,6 @@
     "end_date": "2080-07-31",
     "birth_date": "1974-07-06",
     "salary": 7400,
-    "loan_amount": 300000,
     "interest_rates": {
         "oa_below_55": 2.5,
         "oa_above_55": 4.0,

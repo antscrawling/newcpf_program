@@ -75,7 +75,7 @@ def get_the_config():
     """
     try:
         # Load the JSON configuration file
-        with open('config.json', 'r') as file:
+        with open('new_config.json', 'r') as file:
             config = json.load(file)
     except FileNotFoundError:
         raise FileNotFoundError("The 'config.json' file was not found.")

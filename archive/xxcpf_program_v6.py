@@ -19,19 +19,26 @@ config = ConfigLoader('cpf_config.json')
 # Define the worker function at the top level (outside the class)
 def _save_log_worker(queue, filename):
     """Worker process to save logs to a file."""
+    # Ensure 'a' for append mode is used here!
     with open(filename, 'a') as file:
         while True:
             try:
-                log_entry = queue.get(timeout=1)  # Wait for a log entry with a timeout
+                # Use a timeout to prevent blocking indefinitely if main process dies
+                log_entry = queue.get(timeout=1)
                 if log_entry == "STOP":
+                    print("Log worker received STOP signal.") # Debug print
                     break
                 # Use the top-level serializer function
                 file.write(json.dumps(log_entry, default=custom_serializer) + '\n')
-            except Exception:  # Consider more specific exception handling (e.g., queue.Empty)
-                # Handle timeout or other exceptions gracefully
-                # Check if the queue is empty after timeout before continuing
-                if queue.empty():
-                    continue
+                file.flush() # Ensure data is written promptly
+            except Empty:
+                # Queue is empty, continue waiting
+                continue
+            except Exception as e:
+                print(f"Error in log worker: {e}") # Log errors in the worker
+                # Decide if you want to break or continue on other errors
+                break # Example: Stop worker on unexpected errors
+        print("Log worker finished writing.") # Debug print
 
 # Define the custom serializer at the top level or as a static method
 def custom_serializer(obj):
@@ -111,22 +118,38 @@ class CPFAccount:
             # Optionally, try restarting it or log to stderr
 
     def close_log_writer(self):
-        """Stop the log writer process."""
-        # Check if the process exists and is alive before trying to stop it
+        """Stop the log writer process gracefully."""
+        print("Attempting to close log writer...") # Debug print
         if hasattr(self, 'log_process') and self.log_process.is_alive():
-            try:
-                self.log_queue.put("STOP")  # Send the stop signal
-                self.log_process.join(timeout=5)  # Wait for the process to terminate
-                if self.log_process.is_alive():
-                    # If it's still alive after timeout, terminate it forcefully
-                    self.log_process.terminate()
-                    self.log_process.join()  # Wait for termination
-            except Exception as e:
-                print(f"Error closing log writer: {e}")  # Log potential errors during shutdown
-        # Clean up queue reference
+             try:
+                 print("Putting STOP signal in queue...") # Debug print
+                 self.log_queue.put("STOP")
+                 # Wait for the worker to process the queue (increase timeout if needed)
+                 print("Joining log process...") # Debug print
+                 self.log_process.join(timeout=10) # Increased timeout to 10 seconds
+
+                 if self.log_process.is_alive():
+                     print("Log process did not exit after timeout, terminating...") # Debug print
+                     self.log_process.terminate() # Force terminate if join times out
+                     self.log_process.join() # Wait for termination
+                 else:
+                     print("Log process joined successfully.") # Debug print
+
+             except Exception as e:
+                 print(f"Error closing log writer process: {e}")
+        else:
+             print("Log process not found or not alive.") # Debug print
+
+        # Close the queue itself after the process is confirmed dead
         if hasattr(self, 'log_queue'):
-            self.log_queue.close()
-            self.log_queue.join_thread()
+             try:
+                 print("Closing log queue...") # Debug print
+                 self.log_queue.close()
+                 # This ensures the queue's background thread finishes
+                 self.log_queue.join_thread()
+                 print("Log queue closed.") # Debug print
+             except Exception as e:
+                 print(f"Error closing log queue: {e}")
 
     @property
     def sa_balance(self):
@@ -171,16 +194,15 @@ class CPFAccount:
         self.close_log_writer()
 
     def get_date_dict(self, start_date, end_date, birth_date):
-        """Generate a date dictionary.  #this is called once only """
+        """Generate a date dictionary."""
         print("Warning: get_date_dict needs implementation in CPFAccount or be imported correctly.")
-        from cpf_date_generator_v3 import generate_date_dict
+        from archive.cpf_date_generator_v2 import generate_date_dict
         return generate_date_dict(start_date, end_date, birth_date)
 
     def update_balance(self, account: str, new_balance: float, message: str):
         """
         Sets the account balance to the specified new_balance and logs the change.
         The logged 'amount' reflects the difference from the old balance.
-        # this is called every month
         """
         valid_accounts = ['oa', 'sa', 'ma', 'ra', 'loan', 'excess']
         if account not in valid_accounts:
@@ -194,7 +216,6 @@ class CPFAccount:
         """
         Records an inflow by adding the amount to the current balance
         and then calling update_balance to set the new value and log.
-        # this is called multiple times per month
         """
         valid_accounts = ['oa', 'sa', 'ma', 'ra', 'loan', 'excess']
         if account not in valid_accounts:
@@ -224,7 +245,6 @@ class CPFAccount:
         """
         Records an outflow by subtracting the amount from the current balance
         and then calling update_balance to set the new value and log.
-        # this is called multiplee times every month
         """
         valid_accounts = ['oa', 'sa', 'ma', 'ra', 'loan', 'excess']
         if account not in valid_accounts:
@@ -255,18 +275,7 @@ class CPFAccount:
         self.update_balance(account=account, new_balance=new_balance, message=message or "outflow")
 
     def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: ConfigLoader) -> float:
-        """Calculates the allocation amount for a specific CPF account.
-           "allocation_below_55": {
-       "oa": 0.23,
-       "sa": 0.06,
-       "ma": 0.08
-   },
-   "allocation_above_55": {
-       "oa": 0.115,
-       "ra": 0.105,
-       "ma": 0.075
-   },
-        """
+        """Calculates the allocation amount for a specific CPF account."""
         employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
         employer: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False, config=config)
         total_contribution = employee + employer
@@ -294,10 +303,7 @@ class CPFAccount:
         return alloc
 
     def apply_interest(self, age: int):
-        """Apply interest to all CPF accounts at the end of the year.
-        this is caloled every December - 12 of every year
-        """
-
+        """Apply interest to all CPF accounts at the end of the year."""
         interest_rates = self.config.get('interest_rates', {})
         extra_interest = self.config.get('extra_interest', {})
 
@@ -315,7 +321,7 @@ class CPFAccount:
 
 
     def transfer_to_ra(self,age,retirement_type: str):
-        '''Function to transfer funds only at age 55 month.  only called once in the program '''
+      
         retirement_sum = 0.0
         rtype = ''
         match retirement_type: 
@@ -336,43 +342,24 @@ class CPFAccount:
         retirement_sum = type_dict.get('amount' ,{}) 
         
         #transfer:
+        self._excess_balance = self._sa_balance + self._oa_balance
+        self._excess_balance -= self._loan_balance
+        self._excess_balance -= retirement_sum
+        self._oa_balance -= self._oa_balance
+        self._sa_balance -= self._sa_balance
+        self._ra_balance += retirement_sum
             # transfer funds
-        self.record_inflow('excess',self._oa_balance+self._sa_balance, f"Transfer to RA for age 55")
-        self.record_outflow('excess',retirement_sum, f"Transfer to RA for age 55")
-        self.record_outflow('excess',self._loan_balance, f"Transfer to RA for age 55")
-        
         self.record_inflow('ra', retirement_sum , f"Transfer to RA for {rtype}")
         self.record_outflow('oa',self._oa_balance, f"Transfer to RA for age 55")
-        self.record_outflow('sa',self._sa_balance, f"Transfer to RA for age 55")        
+        self.record_outflow('sa',self._sa_balance, f"Transfer to RA for age 55")
+        self.record_inflow('excess',self._oa_balance+self._sa_balance, f"Transfer to RA for age 55")
         self.record_outflow('loan',self._loan_balance, f"Transfer to RA for age 55")
-        
+        self.record_outflow('excess',retirement_sum, f"Transfer to RA for age 55")
+        self.record_outflow('excess',-self._loan_balance, f"Transfer to RA for age 55")
         
                                                 
     
     def get_cpf_contribution_rate(self, age:int,is_employee:bool)-> float:
-        ''' this is called in different age group 
-        "cpf_contribution_rates": {
-    "below_55": {
-        "employee": 0.2,
-        "employer": 0.17
-    },
-    "55_to_60": {
-        "employee": 0.15,
-        "employer": 0.14
-    },
-    "60_to_65": {
-        "employee": 0.09,
-        "employer": 0.1
-    },
-    "65_to_70": {
-        "employee": 0.075,
-        "employer": 0.085
-    },
-    "above_70": {
-        "employee": 0.05,
-        "employer": 0.075
-    }
-        '''
         cont_dict = self.config.get('cpf_contribution_rates', {})
         d_below_55 = cont_dict.get('below_55', {})
         
@@ -405,29 +392,7 @@ class CPFAccount:
      
     
     def calculate_cpf_contribution(self, salary: float, age: int, is_employee: bool, config: ConfigLoader) -> float:
-        """Calculates CPF contribution based on salary, age, and employment status.
-        "cpf_contribution_rates": {
-    "below_55": {
-        "employee": 0.2,
-        "employer": 0.17
-    },
-    "55_to_60": {
-        "employee": 0.15,
-        "employer": 0.14
-    },
-    "60_to_65": {
-        "employee": 0.09,
-        "employer": 0.1
-    },
-    "65_to_70": {
-        "employee": 0.075,
-        "employer": 0.085
-    },
-    "above_70": {
-        "employee": 0.05,
-        "employer": 0.075
-    }
-        """
+        """Calculates CPF contribution based on salary, age, and employment status."""
         # Use config.get() to access configuration values
         capped_salary: float = min(salary, config.get('salary_cap', 0)) # Added default for safety
 
@@ -457,19 +422,7 @@ class CPFAccount:
         return contribution
 
     def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: dict) -> float:
-        """Calculates the allocation amount for a specific CPF account.
-          "allocation_below_55": {
-      "oa": 0.23,
-      "sa": 0.06,
-      "ma": 0.08
-  },
-  "allocation_above_55": {
-      "oa": 0.115,
-      "ra": 0.105,
-      "ma": 0.075
-  },
-
-        """
+        """Calculates the allocation amount for a specific CPF account."""
         employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
         employer: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False, config=config)
         total_contribution = employee + employer
@@ -497,9 +450,7 @@ class CPFAccount:
         return alloc
 
     def calculate_cpf_payout(self, age: int) -> float:
-        """Calculates the CPF payout amount based on age and retirement sum.
-        only starts at the age of 67
-        """
+        """Calculates the CPF payout amount based on age and retirement sum."""
         payout_age = self.config.get('cpf_payout_age', 65)  # Default payout age if not specified
         retirement_sums = self.config.get('retirement_sums', {})
         brs_info = retirement_sums.get('brs', {})
@@ -511,55 +462,10 @@ class CPFAccount:
             return 0.0  # No payout before payout age
 
     def custom_serializer(self,obj):
-        ''' called every month to save the log '''
         if isinstance(obj, datetime):
             return obj.strftime("%Y-%m-%d %H:%M:%S")  # Convert datetime to string
         raise TypeError("Type not serializable")
 
-    def calculate_loan_payment(self):
-        """Calculates the loan payment amount based on the current loan balance.
-        this is called every month
-        """
-        # Example logic for calculating loan payment
-        if self._loan_balance > 0:
-            # Assuming a fixed interest rate and term for simplicity
-            interest_rate = 0.03
-
-    def calculate_the_loan_amortization(self):
-        """Calculates the loan amortization schedule.
-        this is called every month
-        """
-        # Example logic for calculating loan amortization
-        if self._loan_balance > 0:
-            # Assuming a fixed interest rate and term for simplicity
-            interest_rate = 0.03  # should be coming from the config in the future.
-            term_years = 30  #should come from the config in the future 
-            monthly_payment = self._loan_balance * (interest_rate / 12) / (1 - (1 + interest_rate / 12) ** (-term_years * 12))
-            return monthly_payment
-        else:
-            return 0.0
-        
-
-    def loan_computation(self):
-        ''' this is called every month to calculate the loan payment '''
-        '''" Calculate the loan payment to be deducted from the outstanding loan every month
-        loan_payments": {
-    "year_1_2": 1687.39,
-    "year_3": 1782.27,
-    "year_4_beyond": 1817.49
-},'''
-        if self._loan_balance <= 0:
-            return 0.0
-        else : 
-            theyear = self.current_date.year - self.start_date.year
-            if theyear < 3:
-                return self._loan_balance * 0.03 / 12
-            else:
-                return self._loan_balance * 0.03 / 12
-        loan_payments = self.config.get(['loan_payments','year_1_2'], {}) #1687.39
-        payment_key = 'year_1_2' if age < 24 else 'year_3'
-        loan_payment_amount = float(loan_payments.get(payment_key, 0.0))
-        return loan_payment_amount
 
 if __name__ == "__main__":
     # Example usage
