@@ -256,16 +256,16 @@ class CPFAccount:
 
     def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: ConfigLoader) -> float:
         """Calculates the allocation amount for a specific CPF account.
-           "allocation_below_55": {
-       "oa": 0.23,
-       "sa": 0.06,
-       "ma": 0.08
-   },
-   "allocation_above_55": {
-       "oa": 0.115,
-       "ra": 0.105,
-       "ma": 0.075
-   },
+                   "allocation_below_55": {
+               "oa": 0.23,
+               "sa": 0.06,
+               "ma": 0.08
+           },
+           "allocation_above_55": {
+               "oa": 0.115,
+               "ra": 0.105,
+               "ma": 0.075
+           },
         """
         employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
         employer: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False, config=config)
@@ -276,16 +276,16 @@ class CPFAccount:
         age_of_brs = config.get('age_of_brs', 55) # Added default for safety
 
         # Determine allocation based on age and account type
-        if age <= age_of_brs:
-            # Allocation for those below or at the BRS transfer age (typically 55)
+        if age < age_of_brs: # Use '<' instead of '<='
+            # Allocation for those below the BRS transfer age (typically 55)
             allocation_rates = config.get('allocation_below_55', {}) # Added default for safety
             if account in allocation_rates:
                  # Check if account is valid for this age group (oa, sa, ma)
                  alloc = allocation_rates.get(account, 0.0) * total_contribution # Added default for safety
             # Note: SA allocation stops at 55, RA starts.
             # This logic assumes the calling code handles which accounts are valid per age.
-        else:
-            # Allocation for those above the BRS transfer age
+        else: # This now correctly handles age >= age_of_brs (e.g., age >= 55)
+            # Allocation for those at or above the BRS transfer age
             allocation_rates = config.get('allocation_above_55', {}) # Added default for safety
             if account in allocation_rates:
                  # Check if account is valid for this age group (oa, ra, ma)
@@ -351,27 +351,27 @@ class CPFAccount:
     
     def get_cpf_contribution_rate(self, age:int,is_employee:bool)-> float:
         ''' this is called in different age group 
-        "cpf_contribution_rates": {
-    "below_55": {
-        "employee": 0.2,
-        "employer": 0.17
-    },
-    "55_to_60": {
-        "employee": 0.15,
-        "employer": 0.14
-    },
-    "60_to_65": {
-        "employee": 0.09,
-        "employer": 0.1
-    },
-    "65_to_70": {
-        "employee": 0.075,
-        "employer": 0.085
-    },
-    "above_70": {
-        "employee": 0.05,
-        "employer": 0.075
-    }
+                "cpf_contribution_rates": {
+            "below_55": {
+                "employee": 0.2,
+                "employer": 0.17
+            },
+            "55_to_60": {
+                "employee": 0.15,
+                "employer": 0.14
+            },
+            "60_to_65": {
+                "employee": 0.09,
+                "employer": 0.1
+            },
+            "65_to_70": {
+                "employee": 0.075,
+                "employer": 0.085
+            },
+            "above_70": {
+                "employee": 0.05,
+                "employer": 0.075
+            }
         '''
         cont_dict = self.config.get('cpf_contribution_rates', {})
         d_below_55 = cont_dict.get('below_55', {})
@@ -456,46 +456,6 @@ class CPFAccount:
 
         return contribution
 
-    def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: dict) -> float:
-        """Calculates the allocation amount for a specific CPF account.
-          "allocation_below_55": {
-      "oa": 0.23,
-      "sa": 0.06,
-      "ma": 0.08
-  },
-  "allocation_above_55": {
-      "oa": 0.115,
-      "ra": 0.105,
-      "ma": 0.075
-  },
-
-        """
-        employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
-        employer: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False, config=config)
-        total_contribution = employee + employer
-        alloc: float = 0.0
-
-        # Use config.get() to access configuration values
-        age_of_brs = config.get('age_of_brs', 55) # Added default for safety
-
-        # Determine allocation based on age and account type
-        if age <= age_of_brs:
-            # Allocation for those below or at the BRS transfer age (typically 55)
-            allocation_rates = config.get('allocation_below_55', {}) # Added default for safety
-            if account in allocation_rates:
-                 # Check if account is valid for this age group (oa, sa, ma)
-                 alloc = allocation_rates.get(account, 0.0) * total_contribution # Added default for safety
-            # Note: SA allocation stops at 55, RA starts.
-            # This logic assumes the calling code handles which accounts are valid per age.
-        else:
-            # Allocation for those above the BRS transfer age
-            allocation_rates = config.get('allocation_above_55', {}) # Added default for safety
-            if account in allocation_rates:
-                 # Check if account is valid for this age group (oa, ra, ma)
-                 alloc = allocation_rates.get(account, 0.0) * total_contribution # Added default for safety
-
-        return alloc
-
     def calculate_cpf_payout(self, age: int) -> float:
         """Calculates the CPF payout amount based on age and retirement sum.
         only starts at the age of 67
@@ -544,10 +504,10 @@ class CPFAccount:
         ''' this is called every month to calculate the loan payment '''
         '''" Calculate the loan payment to be deducted from the outstanding loan every month
         loan_payments": {
-    "year_1_2": 1687.39,
-    "year_3": 1782.27,
-    "year_4_beyond": 1817.49
-},'''
+           "year_1_2": 1687.39,
+           "year_3": 1782.27,
+           "year_4_beyond": 1817.49
+        ,'''
         if self._loan_balance <= 0:
             return 0.0
         else : 

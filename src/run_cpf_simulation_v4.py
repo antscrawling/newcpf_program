@@ -148,8 +148,8 @@ def main():
                 ##                                   
                 print(f"{display_date_key:<15}{age:<5}"
                       f"{float(display_oa_bal):<15,.2f}{display_sa_bal:<15,.2f}"
-                      f"{float(display_ma_bal):<15,.2f}{float(display_ra_bal):<+14,.2f}"
-                      f"{float(display_loan_bal):<12,.2f}{float(display_excess_bal):<+11,.2f}"
+                      f"={float(display_ma_bal):<16,.2f}+{float(display_ra_bal):<15,.2f}"
+                      f"{float(display_loan_bal):<13,.2f}{float(display_excess_bal):<16,.2f}"
                       f"{float(display_cpf_payout):<12,.2f}")
                 cpf.transfer_to_ra(age=age, retirement_type='basic')   
                 is_display_special_july = False   
