@@ -66,7 +66,7 @@ def main():
           # cpf.record_inflow(account='excess',amount= initexcess_balance, message="Initial Excess Balance")
           # cpf.record_inflow(account='ra',amount= initra_balance,message= "Initial RA Balance")
             for account, new_balance in zip(['oa', 'sa', 'ma', 'ra', 'excess', 'loan'], [initoa_balance, initsa_balance, initma_balance, initra_balance, initexcess_balance, initloan_balance]):
-                cpf.record_inflow(account=account, amount=new_balance, message=f"Initial Balance of {account}")
+                setattr(cpf,f"{account}_balance", (new_balance, f"Initial Balance of {account}" ))
             is_initial = False
         # Add a blue progress bar for the loop
         for date_key, date_info in tqdm(date_dict.items(), desc="Processing CPF Data", unit="month", colour="blue"):
