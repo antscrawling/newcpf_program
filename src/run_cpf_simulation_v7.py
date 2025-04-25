@@ -1,6 +1,6 @@
 from multiprocessing import Process, Queue
 from cpf_config_loader_v2 import ConfigLoader
-from cpf_program_v8 import CPFAccount
+from cpf_program_v9 import CPFAccount
 from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar
 from pprint import pprint  # For pretty-printing the dictionary
@@ -9,6 +9,9 @@ from dateutil.relativedelta import relativedelta
 from cpf_date_generator_v3 import DateGenerator
 import os
 import json
+
+
+## interest to return as amount not computed in class
 
 def loan_computation_first_three_years(cpf, age, date_key, date_info, config_loader):
     loan_payments = config_loader.get('loan_payments', {})
@@ -89,8 +92,13 @@ def main():
             # Apply interest at the end of the year
             if cpf.current_date.month == 12:
                 cpf.message = f"Applying interest for age {age}"
-                cpf.apply_interest(age=age)
+                interests = cpf.apply_interest(age=age)
 
+                cpf.record_inflow('oa', interests[0], 'Interest for OA')
+                cpf.record_inflow('sa', interests[1], 'Interest for SA')
+                cpf.record_inflow('ma', interests[2], 'Interest for MA')
+                cpf.record_inflow('ra', interests[3], 'Interest for RA')
+    
             # CPF payout calculation
             cpf_payout = 0.0
             if hasattr(cpf, 'calculate_cpf_payout'):
