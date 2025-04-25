@@ -1,6 +1,0 @@
-{"date": "2025-04-19 20:12:51", "account": "sa", "old_balance": 0.0, "new_balance": 1000.0, "amount": 1000.0, "type": "inflow", "message": "sa-Initial SA Balance-1000.00"}
-{"date": "2025-04-20 20:17:32", "account": "sa", "old_balance": 0.0, "new_balance": 253163.35, "amount": 253163.35, "type": "inflow", "message": "sa-initial_sa_balance-253163.35"}
-{"date": "2025-04-20 20:18:13", "account": "sa", "old_balance": 0.0, "new_balance": 253163.35, "amount": 253163.35, "type": "inflow", "message": "sa-initial_sa_balance-253163.35"}
-{"date": "2025-04-20 20:54:09", "account": "sa", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "no change", "message": "sa-update_monthly-0.00"}
-{"date": "2025-04-20 20:54:33", "account": "sa", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "no change", "message": "sa-update_monthly-0.00"}
-{"date": "2025-04-20 20:55:20", "account": "sa", "old_balance": 0.0, "new_balance": 0.0, "amount": 0.0, "type": "no change", "message": "sa-update_monthly-0.00"}
