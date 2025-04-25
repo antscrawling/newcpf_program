@@ -1,4 +1,4 @@
-from cpf_program_v7cgpt import CPFAccount
+from src.cpf_program_v7 import CPFAccount
 
 if __name__ == "__main__":
     # Entry point for CPF simulation using correct logic

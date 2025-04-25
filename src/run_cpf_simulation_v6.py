@@ -51,7 +51,7 @@ def main():
         if is_initial:
             print("Loading initial balances from config...")
             # Use property setters to ensure logging
-            cpf.date_key = start_date
+            cpf.date_key = cpf.custom_serializer(cpf.current_date)
             initoa_balance = float(config_loader.get('oa_balance', 0.0))
             initsa_balance = float(config_loader.get('sa_balance', 0.0))
             initma_balance = float(config_loader.get('ma_balance', 0.0))

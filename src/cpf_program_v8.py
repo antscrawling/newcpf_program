@@ -125,18 +125,18 @@ class CPFAccount:
         if isinstance(data, (tuple, list)) and len(data) == 2:
             value, self.message = data
         else:
-            value, message = float(data), "no message"
+            value, self.message = float(data), "no message"
         diff = value - self._oa_balance
         log_entry = {
             'date': self.date_key,
             'account': 'oa',
             'old_balance': self._oa_balance.__round__(2),
             'new_balance': value.__round__(2),
-            'amount': diff,
+            'amount': diff.__round__(2),
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'oa-{self.message}-{diff:.2f}'
         }
-        self._oa_balance = value
+        self._oa_balance = value.__round__(2)
         self._oa_message = self.message
         self.save_log_to_file(log_entry)
 
@@ -158,12 +158,12 @@ class CPFAccount:
             'account': 'sa',  # Add account identifier
             'old_balance': self._sa_balance.__round__(2),
             'new_balance': value.__round__(2),
-            'amount': diff,
+            'amount': diff.__round__(2),
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'sa-{self.message}-{diff:.2f}'  # Format diff for consistency
         }
         # self._sa_log.append(log_entry) # Optional: Keep in-memory log if needed
-        self._sa_balance = value
+        self._sa_balance = value.__round__(2)
         self._sa_message = self.message
 
         # Save the log entry using multiprocessing
@@ -178,7 +178,7 @@ class CPFAccount:
         if isinstance(data, (tuple, list)) and len(data) == 2:
             value, self.message = data
         else:
-            value, message = float(data), "no message"
+            value, self.message = float(data), "no message"
         diff = value - self._ma_balance
         log_entry = {
             'date': self.date_key,
@@ -189,7 +189,7 @@ class CPFAccount:
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'ma-{self.message}-{diff:.2f}'
         }
-        self._ma_balance = value
+        self._ma_balance = value.__round__(2)
         self._ma_message = self.message
         self.save_log_to_file(log_entry)
 
@@ -202,7 +202,7 @@ class CPFAccount:
         if isinstance(data, (tuple, list)) and len(data) == 2:
             value, self.message = data
         else:
-            value, message = float(data), "no message"
+            value, self.message = float(data), "no message"
         diff = value - self._ra_balance
         log_entry = {
             'date': self.date_key,
@@ -226,7 +226,7 @@ class CPFAccount:
         if isinstance(data, (tuple, list)) and len(data) == 2:
             value, self.message = data
         else:
-            value, message = float(data), "no message"
+            value, self.message = float(data), "no message"
         diff = value - self._excess_balance
         log_entry = {
             'date': self.date_key,
@@ -237,7 +237,7 @@ class CPFAccount:
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'excess-{self.message}-{diff:.2f}'
         }
-        self._excess_balance = value
+        self._excess_balance = value.__round__(2)
         self._excess_message = self.message
         self.save_log_to_file(log_entry)
 
@@ -250,7 +250,7 @@ class CPFAccount:
         if isinstance(data, (tuple, list)) and len(data) == 2:
             value, self.message = data
         else:
-            value, message = float(data), "no message"
+            value, self.message = float(data), "no message"
         diff = value - self._loan_balance
         log_entry = {
             'date': self.date_key,
@@ -261,7 +261,7 @@ class CPFAccount:
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'loan-{self.message}-{diff:.2f}'
         }
-        self._loan_balance = value
+        self._loan_balance = value.__round__(2)
         self._loan_message = self.message
         self.save_log_to_file(log_entry)
 
@@ -310,7 +310,7 @@ class CPFAccount:
         new_balance = current_balance + amount
 
         # Use the property setter to update balance and trigger logging
-        setattr(self, f"{account}_balance", (new_balance, message))
+        setattr(self, f"{account}_balance", (new_balance.__round__(2), message))
 
     def record_outflow(self, account: str, amount: float, message: str = None):
         valid_accounts = ['oa', 'sa', 'ma', 'ra', 'loan', 'excess']
@@ -326,7 +326,7 @@ class CPFAccount:
         new_balance = current_balance - amount
 
         # Use the property setter to update balance and trigger logging
-        setattr(self, f"{account}_balance", (new_balance, message ))
+        setattr(self, f"{account}_balance", (new_balance.__round__(2), message ))
 
     def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: ConfigLoader) -> float:
         """Calculates the allocation amount for a specific CPF account.
@@ -599,7 +599,7 @@ if __name__ == "__main__":
     # Example usage
     with CPFAccount(config) as cpf:
         # Example of setting balances
-        config_loader = ConfigLoader('new_config.json')
+        config_loader = ConfigLoader('cpf_config.json')
         start_date = config_loader.get('start_date',{})
         end_date = config_loader.get('end_date',{})
         birth_date = config_loader.get('birth_date',{})

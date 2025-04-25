@@ -1,6 +1,6 @@
 from multiprocessing import Process, Queue
 from cpf_config_loader_v2 import ConfigLoader
-from cpf_program_v7 import CPFAccount
+from src.cpf_program_v7 import CPFAccount
 from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar
 from pprint import pprint  # For pretty-printing the dictionary
@@ -50,50 +50,42 @@ def main():
 
         if is_initial:
             print("Loading initial balances from config...")
-            cpf._oa_balance = float(config_loader.get('oa_balance', 0.0))
-            cpf._sa_balance = float(config_loader.get('sa_balance', 0.0))
-            cpf._ma_balance = float(config_loader.get('ma_balance', 0.0))
-            cpf._ra_balance = float(config_loader.get('ra_balance', 0.0))
-            cpf._excess_balance = float(config_loader.get('excess_balance', 0.0))
-            cpf._loan_balance = float(config_loader.get('loan_balance', 0.0))
+            # Use property setters to ensure logging
+            cpf.oa_balance = (float(config_loader.get('oa_balance', 0.0)), "Initial OA Balance")
+            cpf.sa_balance = (float(config_loader.get('sa_balance', 0.0)), "Initial SA Balance")
+            cpf.ma_balance = (float(config_loader.get('ma_balance', 0.0)), "Initial MA Balance")
+            cpf.ra_balance = (float(config_loader.get('ra_balance', 0.0)), "Initial RA Balance")
+            cpf.excess_balance = (float(config_loader.get('excess_balance', 0.0)), "Initial Excess Balance")
+            cpf.loan_balance = (float(config_loader.get('loan_balance', 0.0)), "Initial Loan Balance")
             is_initial = False
         # Add a blue progress bar for the loop
         for date_key, date_info in tqdm(date_dict.items(), desc="Processing CPF Data", unit="month", colour="blue"):
             age = date_info['age']
             cpf.current_date = date_info['period_end']
-            if not isinstance(cpf.current_date, (date, datetime)):
-                raise TypeError(f"Invalid date type for cpf.current_date: {type(cpf.current_date)}")
 
             # Determine accounts to process based on age and month
             accounts_to_process = []
             if age <= 55 and cpf.current_date.month <= 7:
-                 accounts_to_process = ['oa', 'ma', 'sa']
-            elif age >= 55 and cpf.current_date.month > 7 :
-                 accounts_to_process = ['oa', 'ma', 'ra']
-            # else: # Case for age < 55 and month >= 7 is implicitly handled (list remains empty)
-            #     pass 
+                accounts_to_process = ['oa', 'ma', 'sa']
+            elif age >= 55 and cpf.current_date.month > 7:
+                accounts_to_process = ['oa', 'ma', 'ra']
 
-            # CPF allocation logic using the determined list
+            # CPF allocation logic
             for account in accounts_to_process:
                 allocation = cpf.calculate_cpf_allocation(age=age, salary=salary, account=account, config=config_loader)
-                cpf.record_inflow(account, allocation, f'allocation_{account}')
+                cpf.record_inflow(account, allocation, f"allocation_{account}")
 
             # Apply interest at the end of the year
-
             if cpf.current_date.month == 12:
                 cpf.apply_interest(age=age)
 
             # CPF payout calculation
-            cpf_payout: float = 0.0
+            cpf_payout = 0.0
             if hasattr(cpf, 'calculate_cpf_payout'):
                 payout_result = cpf.calculate_cpf_payout(age=age)
                 if isinstance(payout_result, (int, float)):
                     cpf_payout = payout_result
-                    cpf.record_inflow('excess', cpf_payout, f'cpf_payout_{age}')
-                else:
-                    print(f"Warning: calculate_cpf_payout returned non-numeric value: {payout_result}")
-            else:
-                print("Warning: CPFAccount missing calculate_cpf_payout method.")
+                    cpf.record_inflow('excess', cpf_payout, f"cpf_payout_{age}")
 
             # Loan payment logic
             if age <= 55:
@@ -102,17 +94,10 @@ def main():
                 loan_payment_amount = float(loan_payments.get(payment_key, 0.0))
 
                 current_loan_balance = getattr(cpf, '_loan_balance', 0.0)
-                if not isinstance(current_loan_balance, (float, int)):
-                    print(f"Warning: Current loan balance is not a number ({current_loan_balance}). Resetting to 0.0.")
-                    current_loan_balance = 0.0
-                    setattr(cpf, '_loan_balance', 0.0)
-
                 actual_payment = min(loan_payment_amount, current_loan_balance)
                 if actual_payment > 0:
-                    cpf.record_outflow('loan', actual_payment, f'loan_payment_{payment_key}')
+                    cpf.record_outflow('loan', actual_payment, f"loan_payment_{payment_key}")
 
-         
-      
             # Display balances including July 2029
             oa_bal = getattr(cpf, '_oa_balance', 0.0)
             sa_bal = getattr(cpf, '_sa_balance', 0.0)
@@ -127,31 +112,37 @@ def main():
                   f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
                   f"{float(cpf_payout):<12,.2f}")
             if age == 55 and cpf.current_date.month == 7:
-                    is_display_special_july = True
-                    orig_oa_bal = oa_bal
-                    orig_sa_bal = sa_bal
-                    orig_ma_bal = ma_bal
-                    orig_loan_bal = loan_bal
-                    orig_ra_bal = ra_bal
-                    orig_excess_bal = excess_bal
+                is_display_special_july = True
+                orig_oa_bal = oa_bal
+                orig_sa_bal = sa_bal
+                orig_ma_bal = ma_bal
+                orig_loan_bal = loan_bal
+                orig_ra_bal = ra_bal
+                orig_excess_bal = excess_bal
                                       
             if is_display_special_july:    
-                # for discplay only                                                                                                                                                                                                                                                                                                                                        #special printing for age 55 and month 7                #  
+                # Special printing for age 55 and month 7
                 display_date_key = f"{date_key}-cpf"
                 display_oa_bal = -orig_oa_bal
                 display_sa_bal = -orig_sa_bal
                 display_ma_bal = orig_ma_bal
                 display_loan_bal = -orig_loan_bal               
                 display_ra_bal = 106500
-                display_excess_bal = (orig_oa_bal + orig_sa_bal) - 106500 - orig_loan_bal
+                new_excess = -1*(display_oa_bal + display_sa_bal -display_ra_bal - display_loan_bal)
                 display_cpf_payout = 0.0
                 ##                                   
                 print(f"{display_date_key:<15}{age:<5}"
                       f"{float(display_oa_bal):<15,.2f}{display_sa_bal:<15,.2f}"
                       f"={float(display_ma_bal):<16,.2f}+{float(display_ra_bal):<15,.2f}"
-                      f"{float(display_loan_bal):<13,.2f}{float(display_excess_bal):<16,.2f}"
+                      f"{float(display_loan_bal):<13,.2f}{float(new_excess):<16,.2f}"
                       f"{float(display_cpf_payout):<12,.2f}")
-                cpf.transfer_to_ra(age=age, retirement_type='basic')   
+                #cpf.transfer_to_ra(age=age, retirement_type='basic')   
+                cpf.record_inflow(account= 'oa',  amount= display_oa_bal,  message= f"transfer_at_cpf_age={age}")
+                cpf.record_inflow(account= 'sa',  amount= display_sa_bal,  message= f"transfer_at_cpf_age={age}")
+                cpf.record_inflow(account= 'loan',amount= display_loan_bal,message= f"transfer_at_cpf_age={age}")
+                cpf.record_inflow(account= 'ra',  amount= display_ra_bal,  message= f"transfer_at_cpf_age={age}")
+                new_excess= -1*(display_oa_bal + display_sa_bal -display_ra_bal - display_loan_bal)
+                cpf.record_inflow(account= 'excess',amount= new_excess,message= f"transfer_at_cpf_age={age}")
                 is_display_special_july = False   
        
             

@@ -87,7 +87,14 @@ run_cpf_simulation_v4
 Wrong program:
 run_cpf_simulation_v4
 
-
+-- 26 Apr 2025 programs.  to run start at run_cpf_simulation_v6.
+run_cpf_simulation_v6.py
+cpf_program_v8.py
+cpf_config.json
+cpf_data_saver_v2.py
+cpf_date_generator_v3.py
+cpf_date_utility_v2.py
+cpf_reconfigure_date_v2.py 
 
 
 
