@@ -1,5 +1,5 @@
 from multiprocessing import Process, Queue
-from cpf_config_loader_v2 import ConfigLoader
+from cpf_config_loader_v3 import ConfigLoader
 from cpf_program_v9 import CPFAccount
 from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar
@@ -21,7 +21,7 @@ def loan_computation_first_three_years(cpf, age, date_key, date_info, config_loa
 def main():
     # Step 1: Load the configuration
 
-    config_loader = ConfigLoader('new_config.json')
+    config_loader = ConfigLoader('cpf_config.json')
     start_date = config_loader.get('start_date', {})
     end_date = config_loader.get('end_date', {})
     birth_date = config_loader.get('birth_date', {})
@@ -98,7 +98,7 @@ def main():
                 cpf.record_inflow('sa', interests[1], 'Interest for SA')
                 cpf.record_inflow('ma', interests[2], 'Interest for MA')
                 cpf.record_inflow('ra', interests[3], 'Interest for RA')
-    
+
             # CPF payout calculation
             cpf_payout = 0.0
             if hasattr(cpf, 'calculate_cpf_payout'):

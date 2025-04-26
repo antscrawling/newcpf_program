@@ -17,15 +17,13 @@ def loan_computation_first_three_years(cpf, age, date_key, date_info, config_loa
 
 def main():
     # Step 1: Load the configuration
-
-    config_loader = ConfigLoader('new_config.json')
+    config_loader = ConfigLoader('cpf_config.json')
     start_date = config_loader.get('start_date', {})
     end_date = config_loader.get('end_date', {})
     birth_date = config_loader.get('birth_date', {})
-
-    
     
     salary = config_loader.get('salary', {})
+    # Fix the assignment of retirement_sums
     config_loader.retirement_sums = config_loader.get('retirement_sums', {})
 
     # Validate that the dates are loaded correctly

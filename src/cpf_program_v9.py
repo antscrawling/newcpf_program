@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from pprint import pprint
 #from dateutility import  MyDateDictGenerator
 import json
-from cpf_config_loader_v2 import ConfigLoader
+from cpf_config_loader_v3 import ConfigLoader
 from cpf_reconfigure_date_v2 import MyDateTime
 
 from collections import OrderedDict
@@ -41,6 +41,8 @@ def custom_serializer(obj):
     # It's better to raise TypeError for unhandled types
     raise TypeError(f"Type {type(obj)} not serializable")
 
+
+
 class CPFAccount:
     def __init__(self, config_loader):  # Accept config_loader
         self.config = config_loader  # Store the config_loader instance
@@ -75,6 +77,19 @@ class CPFAccount:
         self._loan_balance = 0.0
         self._loan_balance_log = []
         self._loan_message = ""       
+        
+        self._combined_balance = 0.0
+        self._combined_balance_log = []
+        self._combined_message = ""
+        
+        self._combinedbelow55_balance = 0.0
+        self._combinedbelow55_log = []
+        self._combinedbelow55_message = ""
+        
+        self._combinedabove55_balance = 0.0
+        self._combinedabove55_log = []
+        self._combinedabove55_message = ""
+        
         
         # Log saving setup
         self.log_queue = Queue()
@@ -265,6 +280,110 @@ class CPFAccount:
         self._loan_message = self.message
         self.save_log_to_file(log_entry)
 
+    @property
+    def combined_balance(self):
+        # Always calculate the combined balance dynamically
+        self._combined_balance = (
+            self._oa_balance +
+            self._sa_balance +
+            self._ma_balance +
+            self._ra_balance
+        )
+        return self._combined_balance, self._combined_message
+
+    @combined_balance.setter
+    def combined_balance(self, data):
+        # Setter logic remains unchanged
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, self.message = data
+        else:
+            value, self.message = float(data), "no message"
+        diff = value - self._combined_balance
+        log_entry = {
+            'date': self.date_key,
+            'account': 'combined',
+            'old_balance': self._combined_balance.__round__(2),
+            'new_balance': value.__round__(2),
+            'amount': diff.__round__(2),
+            'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
+            'message': f'combined-{self.message}-{diff:.2f}'
+        }
+        self._combined_balance = value.__round__(2)
+        self._combined_message = self.message
+        self.save_log_to_file(log_entry)
+
+    @property
+    def combinedbelow55_balance(self):
+        # Dynamically calculate the combined below 55 balance if age <= 55
+        if self.current_date and self.birth_date:
+            age = (self.current_date.year - self.birth_date.year) - (
+                (self.current_date.month, self.current_date.day) < (self.birth_date.month, self.birth_date.day)
+            )
+            if age < 55:
+                self._combinedbelow55_balance = (
+                    self._oa_balance +
+                    self._sa_balance +
+                    self._ma_balance
+                )
+        return self._combinedbelow55_balance, self._combinedbelow55_balance_message
+
+    @combinedbelow55_balance.setter
+    def combinedbelow55_balance(self, data):
+        # Setter logic remains unchanged
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, self.message = data
+        else:
+            value, self.message = float(data), "no message"
+        diff = value - self._combinedbelow55_balance
+        log_entry = {
+            'date': self.date_key,
+            'account': 'combined_below_55',
+            'old_balance': self._combinedbelow55_balance.__round__(2),
+            'new_balance': value.__round__(2),
+            'amount': diff.__round__(2),
+            'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
+            'message': f'combined_below_55-{self.message}-{diff:.2f}'
+        }
+        self._combinedbelow55_balance = value.__round__(2)
+        self._combinedbelow55_balance_message = self.message
+        self.save_log_to_file(log_entry)
+
+    @property
+    def combinedabove55_balance(self):
+        # Dynamically calculate the combined above 55 balance if age >= 55
+        if self.current_date and self.birth_date:
+            age = (self.current_date.year - self.birth_date.year) - (
+                (self.current_date.month, self.current_date.day) < (self.birth_date.month, self.birth_date.day)
+            )
+            if age >= 55:
+                self._combinedabove55_balance = (
+                    self._oa_balance +
+                    self._ra_balance +
+                    self._ma_balance
+                )
+        return self._combinedabove55_balance, self._combinedabove55_balance_message
+
+    @combinedabove55_balance.setter
+    def combinedabove55_balance(self, data):
+        # Setter logic remains unchanged
+        if isinstance(data, (tuple, list)) and len(data) == 2:
+            value, self.message = data
+        else:
+            value, self.message = float(data), "no message"
+        diff = value - self._combinedabove55_balance
+        log_entry = {
+            'date': self.date_key,
+            'account': 'combined_above_55',
+            'old_balance': self._combinedabove55_balance.__round__(2),
+            'new_balance': value.__round__(2),
+            'amount': diff.__round__(2),
+            'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
+            'message': f'combined_above_55-{self.message}-{diff:.2f}'
+        }
+        self._combinedabove55_balance = value.__round__(2)
+        self._combinedabove55_balance_message = self.message
+        self.save_log_to_file(log_entry)
+
     def __enter__(self):
         """Enter the runtime context related to this object."""
         return self
@@ -373,61 +492,62 @@ class CPFAccount:
         """
 
         interest_rates = self.config.get('interest_rates', {})
-        extra_interest = self.config.get('extra_interest', {})
 
         # Base interest rates
         oa_rate = interest_rates.get('oa_below_55', 2.5) if age < 55 else interest_rates.get('oa_above_55', 4.0)
         sa_rate = interest_rates.get('sa', 4.0)
         ma_rate = interest_rates.get('ma', 4.0)
         ra_rate = interest_rates.get('ra', 4.0)
-
-        # Apply interest to each account
-      # self.record_inflow('oa', self._oa_balance * (oa_rate / 100 / 12), 'interest')
-      # self.record_inflow('sa', self._sa_balance * (sa_rate / 100 / 12), 'interest')
-      # self.record_inflow('ma', self._ma_balance * (ma_rate / 100 / 12), 'interest')
-      # self.record_inflow('ra', self._ra_balance * (ra_rate / 100 / 12), 'interest')
         return (self._oa_balance * (oa_rate / 100 / 12),
                 self._sa_balance * (sa_rate / 100 / 12),
                 self._ma_balance * (ma_rate / 100 / 12),
                 self._ra_balance * (ra_rate / 100 / 12))
              
-             
-             
-
-
-
-  # def transfer_to_ra(self,age,retirement_type: str):
-  #     '''Function to transfer funds only at age 55 month.  only called once in the program '''
-  #     retirement_sum = 0.0
-  #     rtype = ''
-  #     match retirement_type: 
-  #         case 'basic':
-  #             rtype='brs'
-  #         case 'full':
-  #             rtype='frs'
-  #         case 'enhanced':
-  #             rtype='ers'
-  #         case _:
-  #             raise ValueError(f"Invalid retirement type: {retirement_type}. Must be 'basic', 'full', or 'enhanced'.")
- 
-  #     """Transfer funds from OA to RA."""
-  #     # Check if the transfer is allowed based on age and other conditions
-  #    
-  #     retirement_dict = self.config.get('retirement_sums', {})
-  #     type_dict = retirement_dict.get(rtype, {})
-  #     retirement_sum = type_dict.get('amount' ,{}) 
-  #     
-  #     #transfer:
-  #         # transfer funds
-  #     self.record_inflow('excess',self._oa_balance+self._sa_balance, f"Transfer to RA for age 55")
-  #     self.record_outflow('excess',retirement_sum, f"Transfer to RA for age 55")
-  #     self.record_outflow('excess',self._loan_balance, f"Transfer to RA for age 55")
-  #     
-  #     self.record_inflow('ra', retirement_sum , f"Transfer to RA for {rtype}")
-  #     self.record_outflow('oa',self._oa_balance, f"Transfer to RA for age 55")
-  #     self.record_outflow('sa',self._sa_balance, f"Transfer to RA for age 55")        
-  #     self.record_outflow('loan',self._loan_balance, f"Transfer to RA for age 55")
+    
+    def apply_extra_interest(self, age: int):
+        """Apply extra interest to SA and MA accounts based on age.
+        this is called every December - 12 of every year
+        """
+        pass
+        #only applicable if below 55 first 60_000 of combined _oa_balance, 
+        # _sa_balance, _ma_balance
+        # combinedbelow55_balance = self._oa_balance + self._sa_balance + self._ma_balance
         
+      #  extra_interest = self.config.get('extra_interest', {}) 
+        
+       
+        
+    #    #record the combined balance below 55
+    #    oa_balance = getattr(self, '_oa_balance', 0)
+    #    sa_balance = getattr(self, '_sa_balance', 0)
+    #    ma_balance = getattr(self, '_ma_balance', 0)
+    #    ra_balance = getattr(self, '_ra_balance', 0)
+    #    below55 = oa_balance + sa_balance + ma_balance
+    #    above55 = oa_balance + ra_balance + ma_balance
+    #    self.record_inflow(_combinedbelow55_balance, oa_balance, f"oa_balance_below_55")
+    #    
+    #    # below 55
+    #    self.record_inflow('oa', oa_balance, f"oa_balance_below_55")
+    #    # above 55
+    #    
+    #    # Check if the age is below 55
+    #    if age < 55:
+    #        _combinedbelow55_balance += min(sum(oa_balance+ sa_balance + ma_balance), 60_000)
+    #        self._combinedbelow55_balance += getattr(self,'_sa_balance',0)
+    #        self._combined_balance += getattr(self,'_ma_balance',0)
+    #    self._combined_balance += getattr(self,'_ra_balance',0)
+    #    combinedbelow55_balance = self._combined_balance
+            
+    #    extra_interest_amount = (min(combinedbelow55_balance, 60000) * extra_interest / 100)
+    #    else:
+    #        extra_interest_amount = 0.0
+        
+
+        
+
+       
+ 
+ 
         
                                                 
     
