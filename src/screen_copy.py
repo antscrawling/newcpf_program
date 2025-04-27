@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import json
-from src.xcpf_config_loader_v3 import ConfigLoader 
+from cpf_config_loader_v3 import ConfigLoader 
 
 
 class CPFConfigApp:
@@ -9,7 +9,9 @@ class CPFConfigApp:
         self.root = root
         self.root.title("CPF Config Input")
         self.config_file = config_file
-        self.config_data  = ConfigLoader(config_file)
+       # self.config_data  = ConfigLoader(config_file)
+        with open(config_file, 'r') as file:
+            self.config_data = json.load(file)
         self.input_fields = {}
 
         self.create_input_fields()
@@ -45,6 +47,6 @@ class CPFConfigApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = CPFConfigApp('cpf_config.json')
+    app = CPFConfigApp(root,'cpf_config.json')
     root.mainloop()
 
