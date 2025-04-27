@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import json
-from cpf_config_loader_v3 import ConfigLoader 
+from src.xcpf_config_loader_v3 import ConfigLoader 
 
 
 class CPFConfigApp:

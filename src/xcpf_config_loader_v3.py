@@ -1,3 +1,4 @@
+# config_loader_v2.py
 import json
 from datetime import datetime, date
 import os
@@ -54,16 +55,39 @@ class ConfigLoader:
                             config_data[key + "_DATE"] = date(year, month, min(transfer_day, last_day))
         self.data = config_data
 
-    def get(self, key, default=None):
-        """Retrieve a value from the configuration using a key."""
-        keys = key.split('.') if isinstance(key, str) else [key]
-        current_value = self.config
+    def get(self, *keys: str, default: Any = None) -> Any:
+        """
+        Retrieves a value from the nested configuration data.
+
+        Args:
+            *keys: One or more string keys representing the path to the desired value.
+                   For example, get('loan_payments', 'year_1_2').
+            default: The value to return if any key in the path is not found.
+                     Defaults to None.
+
+        Returns:
+            The requested value, or the default value if not found.
+            Returns a copy if the retrieved value is a dictionary to prevent
+            unintended modification of the internal configuration.
+
+        Raises:
+            ValueError: If no keys are provided.
+        """
+        if not keys:
+            raise ValueError("get() requires at least one key")
+
+        current_value = self.data
         for key in keys:
-            if isinstance(current_value, dict):
-                current_value = current_value.get(key, default)
-            else:
+            if not isinstance(current_value, dict):
+                # Cannot traverse further if the current level is not a dictionary
                 return default
-        return current_value
+            current_value = current_value.get(key)
+            if current_value is None:
+                # Key not found at this level
+                return default
+
+        # Return a copy if the final value is a dictionary
+        return current_value.copy() if isinstance(current_value, dict) else current_value
 
     def set(self, key, value):
         # Note: This basic 'set' only works for top-level keys.
@@ -99,7 +123,7 @@ if __name__ == "__main__":
     # }
     try:
         # Create a dummy config for testing if it doesn't exist
-        if not os.path.exists('cpf__config.json'):
+        if not os.path.exists('new__config.json'):
             dummy_data = {
                 "START_DATE": "2023-01-15",
                 "BIRTH_DATE": "1980-05-20",

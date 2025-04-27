@@ -200,7 +200,7 @@ class CPFAccount:
             'account': 'ma',
             'old_balance': self._ma_balance.__round__(2),
             'new_balance': value.__round__(2),
-            'amount': diff,
+            'amount': diff.__round__(2),
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'ma-{self.message}-{diff:.2f}'
         }
@@ -224,7 +224,7 @@ class CPFAccount:
             'account': 'ra',
             'old_balance': self._ra_balance.__round__(2),
             'new_balance': value.__round__(2),
-            'amount': diff,
+            'amount': diff.__round__(2),
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'ra-{self.message}-{diff:.2f}'
         }
@@ -248,7 +248,7 @@ class CPFAccount:
             'account': 'excess',
             'old_balance': self._excess_balance.__round__(2),
             'new_balance': value.__round__(2),
-            'amount': diff,
+            'amount': diff.__round__(2),
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'excess-{self.message}-{diff:.2f}'
         }
@@ -272,7 +272,7 @@ class CPFAccount:
             'account': 'loan',
             'old_balance': self._loan_balance.__round__(2),
             'new_balance': value.__round__(2),
-            'amount': diff,
+            'amount': diff.__round__(2),
             'type': 'inflow' if diff > 0 else ('outflow' if diff < 0 else 'no change'),
             'message': f'loan-{self.message}-{diff:.2f}'
         }
@@ -502,54 +502,103 @@ class CPFAccount:
                 self._sa_balance * (sa_rate / 100 / 12),
                 self._ma_balance * (ma_rate / 100 / 12),
                 self._ra_balance * (ra_rate / 100 / 12))
-             
-    
-    def apply_extra_interest(self, age: int):
+
+
+    def calculate_combined_balance(self, age):
+        ''' calculate the combined balance based on age '''
+        if not isinstance(age, int):
+            raise ValueError("Age must be an integer")
+        if age < 55:
+            #                       50000                     -->  20000
+            oa_balance = min(getattr(self, '_oa_balance', 0), 20_000)
+            #                       50000                    -->   40000
+            sa_balance = min(getattr(self, '_sa_balance', 0), 40_000 )
+            ma_balance = min(getattr(self, '_ma_balance', 0), 40_000 )
+            ra_balance = min(getattr(self, '_ra_balance', 0), 40_000 )
+            return oa_balance, sa_balance, ma_balance, ra_balance
+        elif age >= 55:
+            #                       50000                     -->  20000
+            oa_balance = min(getattr(self, '_oa_balance', 0), 20_000)
+            #                       50000                    -->   40000
+            sa_balance = min(getattr(self, '_sa_balance', 0), 10_000)
+            ma_balance = min(getattr(self, '_ma_balance',0),  10_000)
+            ra_balance = min(getattr(self, '_ra_balance', 0), 10_000)
+            return oa_balance, sa_balance, ma_balance, ra_balance
+         
+            
+            
+            
+            
+            
+            
+            
+            
+            
+        
+    def calculate_interest_on_cpf(self, account: str, age: int, amount: float):
+        """Apply interest to all CPF accounts at the end of the year.
+        This is called every December - 12 of every year.
+        """
+        
+        
+        interest_rates = self.config.get('interest_rates', {})
+       
+
+        # Base interest rates
+        oa_rate = interest_rates.get('oa_below_55', 2.5) if age < 55 else interest_rates.get('oa_above_55', 4.0)
+        sa_rate = interest_rates.get('sa', 4.0)
+        ma_rate = interest_rates.get('ma', 4.0)
+        ra_rate = interest_rates.get('ra', 4.0)
+        # account is either oa, sa, ma, ra
+        if account == 'oa':
+            return ((oa_rate / 100 / 12) * amount ).__round__(2)
+        elif account == 'sa':
+            return ((sa_rate / 100 / 12) * amount ).__round__(2)
+        elif account == 'ma':
+            return ((ma_rate / 100 / 12) * amount ).__round__(2)
+        elif account == 'ra':
+            return ((ra_rate / 100 / 12) * amount ).__round__(2)
+        else:
+            raise ValueError("Invalid account type. Must be 'oa', 'sa', 'ma', or 'ra'.")
+            
+                                                                                                           
+    def calculate_extra_interest(self, age: int):
         """Apply extra interest to SA and MA accounts based on age.
         this is called every December - 12 of every year
+        "extra_interest": {
+            "below_55": 1.0,
+            "first_30k_above_55": 2.0,
+            "next_30k_above_55": 1.0
+            },
         """
-        pass
-        #only applicable if below 55 first 60_000 of combined _oa_balance, 
-        # _sa_balance, _ma_balance
-        # combinedbelow55_balance = self._oa_balance + self._sa_balance + self._ma_balance
-        
-      #  extra_interest = self.config.get('extra_interest', {}) 
-        
-       
-        
-    #    #record the combined balance below 55
-    #    oa_balance = getattr(self, '_oa_balance', 0)
-    #    sa_balance = getattr(self, '_sa_balance', 0)
-    #    ma_balance = getattr(self, '_ma_balance', 0)
-    #    ra_balance = getattr(self, '_ra_balance', 0)
-    #    below55 = oa_balance + sa_balance + ma_balance
-    #    above55 = oa_balance + ra_balance + ma_balance
-    #    self.record_inflow(_combinedbelow55_balance, oa_balance, f"oa_balance_below_55")
-    #    
-    #    # below 55
-    #    self.record_inflow('oa', oa_balance, f"oa_balance_below_55")
-    #    # above 55
-    #    
-    #    # Check if the age is below 55
-    #    if age < 55:
-    #        _combinedbelow55_balance += min(sum(oa_balance+ sa_balance + ma_balance), 60_000)
-    #        self._combinedbelow55_balance += getattr(self,'_sa_balance',0)
-    #        self._combined_balance += getattr(self,'_ma_balance',0)
-    #    self._combined_balance += getattr(self,'_ra_balance',0)
-    #    combinedbelow55_balance = self._combined_balance
-            
-    #    extra_interest_amount = (min(combinedbelow55_balance, 60000) * extra_interest / 100)
-    #    else:
-    #        extra_interest_amount = 0.0
-        
-
-        
-
-       
- 
- 
-        
-                                                
+        extra_interest = self.config.get('extra_interest', {}) 
+        oa_interest = 0.0
+        sa_interest = 0.0
+        ma_interest = 0.0
+        ra_interest = 0.0
+        oa_balance,sa_balance,ma_balance,ra_balance = self.calculate_combined_balance(age)
+        if age < 55:
+           # oa_balance,sa_balance,ma_balance,ra_balance = self.calculate_combined_balance(age)
+            extra_interest = extra_interest.get('below_55', 1.0)
+            oa_interest = oa_balance * (extra_interest / 100 / 12)
+            sa_interest = sa_balance * (extra_interest / 100 / 12)
+            ma_interest = ma_balance * (extra_interest / 100 / 12)
+            ra_interest = 0.0
+            return (0, oa_interest + sa_interest, ma_interest, ra_interest)
+        elif age >= 55 :
+            extra_interest1 = extra_interest.get('first_30k_above_55', 2.0)       
+            extra_interest2 = extra_interest.get('next_30k_above_55', 1.0)
+          #  oa_balance, sa_balance,ma_balance,ra_balance = self.calculate_combined_balance_above_55_1(age)
+            first_30k = min((oa_balance+sa_balance+ma_balance+ra_balance),30_000)
+            next_30k = min(oa_balance+sa_balance+ma_balance+ra_balance-first_30k,30_000)                                       
+            if first_30k > 0:                                             
+                ra_interest += (min(first_30k,30_000) * (extra_interest1 / 100 / 12))
+            elif next_30k > 0:
+                ra_interest += (min(next_30k,30_000) * (extra_interest2 / 100 / 12))
+            else:
+                ra_interest = 0.0        
+        return (oa_interest, sa_interest, ma_interest, ra_interest)
+                                                                        
     
     def get_cpf_contribution_rate(self, age:int,is_employee:bool)-> float:
         ''' this is called in different age group 

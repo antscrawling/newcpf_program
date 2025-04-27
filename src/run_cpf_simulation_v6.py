@@ -1,5 +1,5 @@
 from multiprocessing import Process, Queue
-from cpf_config_loader_v2 import ConfigLoader
+from cpf_config_loader_v3 import ConfigLoader
 from cpf_program_v8 import CPFAccount
 from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar

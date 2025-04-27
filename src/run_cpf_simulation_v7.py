@@ -20,16 +20,19 @@ def loan_computation_first_three_years(cpf, age, date_key, date_info, config_loa
 
 def main():
     # Step 1: Load the configuration
-
+    oa_bal = 0.0
+    sa_bal = 0.0
+    ma_bal = 0.0
+    ra_bal = 0.0
+    excess_bal = 0.0
+    loan_bal = 0.0
     config_loader = ConfigLoader('cpf_config.json')
     start_date = config_loader.get('start_date', {})
     end_date = config_loader.get('end_date', {})
     birth_date = config_loader.get('birth_date', {})
-
-    
-    
+    brs_amount = config_loader.get(['retirement_sums','brs','amount'], {})    
     salary = config_loader.get('salary', {})
-    config_loader.retirement_sums = config_loader.get('retirement_sums', {})
+    #config_loader.retirement_sums = config_loader.get('retirement_sums', {})
 
     # Validate that the dates are loaded correctly
     if not all([start_date, end_date, birth_date]):
@@ -91,13 +94,39 @@ def main():
 
             # Apply interest at the end of the year
             if cpf.current_date.month == 12:
-                cpf.message = f"Applying interest for age {age}"
-                interests = cpf.apply_interest(age=age)
-
-                cpf.record_inflow('oa', interests[0], 'Interest for OA')
-                cpf.record_inflow('sa', interests[1], 'Interest for SA')
-                cpf.record_inflow('ma', interests[2], 'Interest for MA')
-                cpf.record_inflow('ra', interests[3], 'Interest for RA')
+                
+                account_balance = 0.0
+                oa_interest = 0.0
+                sa_interest = 0.0
+                ma_interest = 0.0
+                ra_interest = 0.0
+                oa_extra_interest = 0.0
+                sa_extra_interest = 0.0
+                ma_extra_interest = 0.0
+                ra_extra_interest = 0.0                
+                for account in ['oa', 'sa', 'ma', 'ra']:
+                    cpf.message = f"Applying interest for {account} at age {age}"
+                    account_balance = getattr(cpf, f'_{account}_balance', 0.0)
+                    if account_balance > 0:
+                        if account == 'oa':
+                            #account: str, age: int, amount: float):
+                            oa_interest = cpf.calculate_interest_on_cpf(account=account, age=age, amount=account_balance)
+                        elif account == 'sa':
+                            sa_interest = cpf.calculate_interest_on_cpf(account=account, age=age, amount=account_balance)
+                        elif account == 'ma':
+                            ma_interest = cpf.calculate_interest_on_cpf(account=account, age=age, amount=account_balance)
+                        elif account == 'ra':
+                            ra_interest = cpf.calculate_interest_on_cpf(account=account, age=age, amount=account_balance)
+                        # Record the interest inflow                                                       
+                oa_extra_interest, sa_extra_interest, ma_extra_interest, ra_extra_interest = cpf.calculate_extra_interest(age=age)
+                cpf.record_inflow(account='oa', amount=oa_interest, message=f"Interest for {account} at age {age}")
+                cpf.record_inflow(account='sa', amount=sa_interest, message=f"Interest for {account} at age {age}")
+                cpf.record_inflow(account='ma', amount=ma_interest, message=f"Interest for {account} at age {age}")
+                cpf.record_inflow(account='ra', amount=ra_interest, message=f"Interest for {account} at age {age}")
+                cpf.record_inflow(account='oa', amount=oa_extra_interest, message=f"Extra Interest for {account} at age {age}")
+                cpf.record_inflow(account='sa', amount=sa_extra_interest, message=f"Extra Interest for {account} at age {age}")
+                cpf.record_inflow(account='ma', amount=ma_extra_interest, message=f"Extra Interest for {account} at age {age}")
+                cpf.record_inflow(account='ra', amount=ra_extra_interest, message=f"Extra Interest for {account} at age {age}")                                                                                                
 
             # CPF payout calculation
             cpf_payout = 0.0
@@ -120,15 +149,15 @@ def main():
 
             # Display balances including July 2029
             cpf.date_key = date_key
-            oa_bal = getattr(cpf, '_oa_balance', 0.0)
-            sa_bal = getattr(cpf, '_sa_balance', 0.0)
-            ma_bal = getattr(cpf, '_ma_balance', 0.0)
-            ra_bal = getattr(cpf, '_ra_balance', 0.0)
-            loan_bal = getattr(cpf, '_loan_balance', 0.0)
-            excess_bal = getattr(cpf, '_excess_balance', 0.0)
-            display_ra = f"{'closed':<15}" if cpf._sa_balance == 0.0 else f'{float(sa_bal):<15,.2f}'
+            oa_bal = getattr(cpf, '_oa_balance', 0.0).__round__(2)
+            sa_bal = getattr(cpf, '_sa_balance', 0.0).__round__(2)
+            ma_bal = getattr(cpf, '_ma_balance', 0.0).__round__(2)
+            ra_bal = getattr(cpf, '_ra_balance', 0.0).__round__(2)
+            loan_bal = getattr(cpf, '_loan_balance', 0.0).__round__(2)
+            excess_bal = getattr(cpf, '_excess_balance', 0.0).__round__(2)
+           # display_ra = f"{'closed':<15}" if cpf._sa_balance == 0.0 else f'{float(sa_bal):<15,.2f}'
             print(f"{date_key:<15}{age:<5}"
-                  f"{float(oa_bal):<15,.2f}{display_ra}"
+                  f"{float(oa_bal):<15,.2f}{float(sa_bal):<15,.2f}"
                   f"{float(ma_bal):<15,.2f}{float(ra_bal):<15,.2f}"
                   f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
                   f"{float(cpf_payout):<12,.2f}")
@@ -140,6 +169,7 @@ def main():
                 orig_loan_bal = loan_bal
                 orig_ra_bal = ra_bal
                 orig_excess_bal = excess_bal
+            
                                       
             if is_display_special_july:    
                 # Special printing for age 55 and month 7
@@ -148,30 +178,23 @@ def main():
                 display_sa_bal = -orig_sa_bal
                 display_ma_bal = orig_ma_bal
                 display_loan_bal = -orig_loan_bal               
-                display_ra_bal = 106500
-                new_excess = -1*(display_oa_bal + display_sa_bal -display_ra_bal - display_loan_bal)
+                display_ra_bal =  (orig_oa_bal + orig_sa_bal - orig_loan_bal)
+                display_excess_bal = (orig_oa_bal + orig_sa_bal - orig_loan_bal - brs_amount)
                 display_cpf_payout = 0.0
                 ##                                   
                 print(f"{display_date_key:<15}{age:<4}"
                       f"{float(display_oa_bal):<15,.2f}{display_sa_bal:<15,.2f}"
                       f"={float(display_ma_bal):<14,.2f}+{float(display_ra_bal):<14,.2f}"
-                      f"{float(display_loan_bal):<13,.2f}{float(new_excess):<12,.2f}"
+                      f"{float(display_loan_bal):<13,.2f}{float(display_excess_bal):<12,.2f}"
                       f"{float(display_cpf_payout):<12,.2f}")
 
                 cpf.record_inflow(account= 'oa',  amount= display_oa_bal,  message= f"transfer_cpf_age={age}")
                 cpf.record_inflow(account= 'sa',  amount= display_sa_bal,  message= f"transfer_cpf_age={age}")
                 cpf.record_inflow(account= 'loan',amount= display_loan_bal,message= f"transfer_cpf_age={age}")
                 cpf.record_inflow(account= 'ra',  amount= display_ra_bal,  message= f"transfer_cpf_age={age}")
-                new_excess= -1*(display_oa_bal + display_sa_bal -display_ra_bal - display_loan_bal)
-                cpf.record_inflow(account= 'excess',amount= new_excess,message= f"transfer_cpf_age={age}")
+                cpf.record_inflow(account= 'excess',amount= display_excess_bal,message= f"transfer_cpf_age={age}")
                 is_display_special_july = False   
-       
-            
-            
-            
-            
-            
-
+                                                       
 
 if __name__ == "__main__":
     main()
