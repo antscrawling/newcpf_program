@@ -486,54 +486,40 @@ class CPFAccount:
 
         return alloc
 
-    def apply_interest(self, age: int):
-        """Apply interest to all CPF accounts at the end of the year.
-        this is caloled every December - 12 of every year
-        """
-
-        interest_rates = self.config.get('interest_rates', {})
-
-        # Base interest rates
-        oa_rate = interest_rates.get('oa_below_55', 2.5) if age < 55 else interest_rates.get('oa_above_55', 4.0)
-        sa_rate = interest_rates.get('sa', 4.0)
-        ma_rate = interest_rates.get('ma', 4.0)
-        ra_rate = interest_rates.get('ra', 4.0)
-        return (self._oa_balance * (oa_rate / 100 / 12),
-                self._sa_balance * (sa_rate / 100 / 12),
-                self._ma_balance * (ma_rate / 100 / 12),
-                self._ra_balance * (ra_rate / 100 / 12))
-
 
     def calculate_combined_balance(self, age):
         ''' calculate the combined balance based on age '''
+        oa_balance = 0.0
+        sa_balance = 0.0
+        ma_balance = 0.0
+        ra_balance = 0.0
         if not isinstance(age, int):
             raise ValueError("Age must be an integer")
         if age < 55:
-            #                       50000                     -->  20000
+            #                       10_000                     -->  10_000
             oa_balance = min(getattr(self, '_oa_balance', 0), 20_000)
-            #                       50000                    -->   40000
+            #                       50_000                    -->   40_000       
             sa_balance = min(getattr(self, '_sa_balance', 0), 40_000 )
+            if (oa_balance + sa_balance) == 60_000:
+                return oa_balance, sa_balance, 0.00, 0.00
             ma_balance = min(getattr(self, '_ma_balance', 0), 40_000 )
-            ra_balance = min(getattr(self, '_ra_balance', 0), 40_000 )
+            if (oa_balance + sa_balance + ma_balance) == 60_000:
+                return oa_balance, sa_balance, ma_balance, 0.00
+            ra_balance = 0.00
             return oa_balance, sa_balance, ma_balance, ra_balance
         elif age >= 55:
             #                       50000                     -->  20000
             oa_balance = min(getattr(self, '_oa_balance', 0), 20_000)
-            #                       50000                    -->   40000
-            sa_balance = min(getattr(self, '_sa_balance', 0), 10_000)
-            ma_balance = min(getattr(self, '_ma_balance',0),  10_000)
-            ra_balance = min(getattr(self, '_ra_balance', 0), 10_000)
-            return oa_balance, sa_balance, ma_balance, ra_balance
-         
-            
-            
-            
-            
-            
-            
-            
-            
-            
+           # sa_balance = min(getattr(self, '_sa_balance', 0), 10_000)
+           #if (oa_balance + sa_balance) == 30_000:
+           #    return oa_balance, sa_balance, 0.00, 0.00
+            ma_balance = min(getattr(self, '_ma_balance',0),  30_000 - oa_balance)
+            if (oa_balance  + ma_balance) == 30_000:
+                return oa_balance, sa_balance, ma_balance, ra_balance
+            ra_balance = min(getattr(self, '_ra_balance', 0), 30_000)
+            if (oa_balance + ma_balance + ra_balance) == 60_000:
+                return oa_balance, sa_balance, ma_balance, ra_balance
+            return oa_balance, sa_balance, ma_balance, ra_balance                                                                                                                     
         
     def calculate_interest_on_cpf(self, account: str, age: int, amount: float):
         """Apply interest to all CPF accounts at the end of the year.
@@ -591,10 +577,10 @@ class CPFAccount:
           #  oa_balance, sa_balance,ma_balance,ra_balance = self.calculate_combined_balance_above_55_1(age)
             first_30k = min((oa_balance+sa_balance+ma_balance+ra_balance),30_000)
             next_30k = min(oa_balance+sa_balance+ma_balance+ra_balance-first_30k,30_000)                                       
-            if first_30k > 0:                                             
-                ra_interest += (min(first_30k,30_000) * (extra_interest1 / 100 / 12))
-            elif next_30k > 0:
-                ra_interest += (min(next_30k,30_000) * (extra_interest2 / 100 / 12))
+            if first_30k == 30_000:                                            
+                ra_interest = 30_000 * (extra_interest1 / 100 / 12)
+            elif next_30k == 30_000:
+                ra_interest =  30_000 * (extra_interest2 / 100 / 12)
             else:
                 ra_interest = 0.0        
         return (oa_interest, sa_interest, ma_interest, ra_interest)

@@ -65,12 +65,6 @@ def main():
             initexcess_balance = float(config_loader.get('excess_balance', 0.0))
             initloan_balance = float(config_loader.get('loan_balance', 0.0))
             #record the updates
-          # cpf.record_inflow(account='oa',amount= initoa_balance,message= "Initial OA Balance")    
-          # cpf.record_inflow(account='sa',amount= initsa_balance,message= "Initial SA Balance")
-          # cpf.record_inflow(account='ma',amount= initma_balance,message= "Initial MA Balance")
-          # cpf.record_inflow(account='loan', amount=initloan_balance,message= "Initial Loan Balance")
-          # cpf.record_inflow(account='excess',amount= initexcess_balance, message="Initial Excess Balance")
-          # cpf.record_inflow(account='ra',amount= initra_balance,message= "Initial RA Balance")
             for account, new_balance in zip(['oa', 'sa', 'ma', 'ra', 'excess', 'loan'], [initoa_balance, initsa_balance, initma_balance, initra_balance, initexcess_balance, initloan_balance]):
                 cpf.record_inflow(account=account, amount=new_balance, message=f"Initial Balance of {account}")
             is_initial = False
@@ -104,6 +98,7 @@ def main():
                 sa_extra_interest = 0.0
                 ma_extra_interest = 0.0
                 ra_extra_interest = 0.0                
+
                 for account in ['oa', 'sa', 'ma', 'ra']:
                     cpf.message = f"Applying interest for {account} at age {age}"
                     account_balance = getattr(cpf, f'_{account}_balance', 0.0)
