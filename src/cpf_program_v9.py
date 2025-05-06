@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from pprint import pprint
 #from dateutility import  MyDateDictGenerator
 import json
-from cpf_config_loader_v3 import ConfigLoader
+from cpf_config_loader_v4 import ConfigLoader
 from cpf_reconfigure_date_v2 import MyDateTime
 
 from collections import OrderedDict
@@ -52,23 +52,50 @@ class CPFAccount:
         self.start_date = None
         self.end_date = None
         self.birth_date = None
-
+        self.salary = self.config.getdata('salary', 0.0)
+        self.age = 0
+        self._oa_allocation55      = 0.0
+        self._sa_allocation55      = 0.00
+        self._ma_allocation55      = 0.00
+        self._ra_allocation55      = 0.00
+        self._oa_allocation5560   = 0.00
+        self._sa_allocation5560   = 0.00
+        self._ma_allocation5560   = 0.00
+        self._ra_allocation5560   = 0.00
+        self._oa_allocation6065    = 0.00
+        self._ma_allocation6065    = 0.00
+        self._ra_allocation6065    = 0.00
+        self._oa_allocation6570    = 0.00
+        self._ma_allocation6570    = 0.00
+        self._ra_allocation6570    = 0.00
+        self._oa_allocation70      = 0.00
+        self._ma_allocation70      = 0.00
+        self._ra_allocation70      = 0.00
+  
         # Account balances and logs
         self._oa_balance = 0.0
         self._oa_log = []
         self._oa_message = ""
+        self._oa_allocation = 0.0
 
         self._sa_balance = 0.0
         self._sa_log = []
         self._sa_message = ""
+        self._sa_allocation = 0.0
 
         self._ma_balance = 0.0
         self._ma_log = []
         self._ma_message = ""
+        self._ma_allocation = 0.0
 
         self._ra_balance = 0.0
         self._ra_log = []
         self._ra_message = ""
+        self._ra_allocation = 0.0
+        
+        self.employer_contribution = 0.0
+        self.employee_contribution = 0.0
+        self.total_contribution = 0.0
 
         self._excess_balance = 0.0
         self._excess_balance_log = []
@@ -89,7 +116,7 @@ class CPFAccount:
         self._combinedabove55_balance = 0.0
         self._combinedabove55_log = []
         self._combinedabove55_message = ""
-        
+       
         
         # Log saving setup
         self.log_queue = Queue()
@@ -447,55 +474,105 @@ class CPFAccount:
         # Use the property setter to update balance and trigger logging
         setattr(self, f"{account}_balance", (new_balance.__round__(2), message ))
 
-    def calculate_cpf_allocation(self, age: int, salary: float, account: str, config: ConfigLoader) -> float:
-        """Calculates the allocation amount for a specific CPF account.
-                   "allocation_below_55": {
-               "oa": 0.23,
-               "sa": 0.06,
-               "ma": 0.08
-           },
-           "allocation_above_55": {
-               "oa": 0.115,
-               "ra": 0.105,
-               "ma": 0.075
-           },
+
+    def calculate_cpf_allocation(self, account: str) -> float:
         """
-        employee: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=True, config=config)
-        employer: float = self.calculate_cpf_contribution(salary=salary, age=age, is_employee=False, config=config)
-        total_contribution = employee + employer
-        alloc: float = 0.0
+        Calculates the allocation amount for a specific CPF account based on age and total CPF contribution.
+        """
+        # Ensure total contributions are calculated
+        if self.total_contribution == 0.0:
+            raise ValueError("Total contributions have not been calculated. Call `calculate_total_contributions` first.")
 
-        # Use config.get() to access configuration values
-        age_of_brs = config.get('age_of_brs', 55) # Added default for safety
+        # Determine allocation rates based on age
+        if self.age < 55:
+            alloc_percentage = self.config.getdata(['allocation_below_55',account],0)
+            self._oa_allocation55 = alloc_percentage * self.total_contribution
+            self._sa_allocation55 = alloc_percentage * self.total_contribution
+            self._ma_allocation55 = alloc_percentage * self.total_contribution
+            self._ra_allocation55 = 0.0
+           
+        elif 55 <= self.age < 60:
+            alloc_percentage = self.config.getdata(['allocation_above_55',account,'56_to_60'], 0)
+            self._oa_allocation_5560 = alloc_percentage * self.total_contribution
+            self._sa_allocation_5560 = alloc_percentage * self.total_contribution if self.age <= 55 else 0.0
+            self._ma_allocation_5560 = alloc_percentage * self.total_contribution
+            self._ra_allocation_5560 = alloc_percentage * self.total_contribution if self.age > 55 else 0.0
+        elif 60 <= self.age < 65:
+            alloc_percentage = self.config.getdata(['allocation_above_55',account,'61_to_65'], 0)
+            self._oa_allocation6065 = alloc_percentage * self.total_contribution
+            self._ma_allocation6065 = alloc_percentage * self.total_contribution
+            self._ra_allocation6065 = alloc_percentage * self.total_contribution 
+           
+        elif 65 <= self.age < 70:
+            alloc_percentage = self.config.getdata(['allocation_above_55', account,'66_to_70'],0)
+            self._oa_allocation6570 = alloc_percentage * self.total_contribution
+            self._ma_allocation6570 = alloc_percentage * self.total_contribution
+            self._ra_allocation6570 = alloc_percentage * self.total_contribution 
+     
+        else:  # age >= 70
+            alloc_percentage = self.config.getdata(['allocation_above_55',account,'above_70'], 0)
+            self._oa_allocation70 = alloc_percentage * self.total_contribution
+            self._ma_allocation70 = alloc_percentage * self.total_contribution
+            self._ra_allocation70 = alloc_percentage * self.total_contribution          
 
-        # Determine allocation based on age and account type
-        if age < age_of_brs: # Use '<' instead of '<='
-            # Allocation for those below the BRS transfer age (typically 55)
-            allocation_rates = config.get('allocation_below_55', {}) # Added default for safety
-            if account in allocation_rates:
-                 # Check if account is valid for this age group (oa, sa, ma)
-                 alloc = allocation_rates.get(account, 0.0) * total_contribution # Added default for safety
-            # Note: SA allocation stops at 55, RA starts.
-            # This logic assumes the calling code handles which accounts are valid per age.
-        else: # This now correctly handles age >= age_of_brs (e.g., age >= 55)
-            # Allocation for those at or above the BRS transfer age
-            allocation_rates = config.get('allocation_above_55', {}) # Added default for safety
-            if account in allocation_rates:
-                 # Check if account is valid for this age group (oa, ra, ma)
-                 alloc = allocation_rates.get(account, 0.0) * total_contribution # Added default for safety
+        # Calculate the allocation amount
+        allocation_amount = self.total_contribution * alloc_percentage
+        return allocation_amount
 
-        return alloc
+    def compute_and_add_allocation(self):
+        """
+        Compute the CPF allocation amounts for each category (oa, sa, ma, ra) based on the age
+        and add them to the configuration using the add_key_value method.
+        """
+        # Retrieve the salary cap
+        salary_cap = self.config.getdata('salary_cap', 0)
+        self.calculate_total_contributions()
+        allocation = {}
+        mydict = {}
+        with open('cpf_config.json', 'r') as file:
+            mydict = json.load(file) 
+        # Determine the correct age bracket for contribution rates
+        allocation =   {"allocation_below_55": {
+                        "oa": {"allocation":0.6217,"amount": 0.6217 * self.total_contribution},
+                        "sa": {"allocation":0.1621,"amount": 0.1621 * self.total_contribution},
+                        "ma": {"allocation":0.2162,"amount": 0.2162 * self.total_contribution}},
+                        "allocation_above_55": {
+       "oa": {
+           "56_to_60": {"allocation":0.3694,   "amount": 0.3694 * self.total_contribution },
+           "61_to_65": {"allocation":0.149,    "amount": 0.149  * self.total_contribution },
+           "66_to_70": {"allocation":0.0607,   "amount": 0.0607 * self.total_contribution },
+           "above_70": {"allocation":0.08,     "amount": 0.08  * self.total_contribution }
+       },
+       "sa": {"allocation":0.00, "amount": 0.0 },
+       "ma": {
+           "56_to_60": {"allocation":0.323       ,"amount" : 0.323  * self.total_contribution },
+           "61_to_65": {"allocation":0.4468      ,"amount" : 0.4468 * self.total_contribution },
+           "66_to_70": {"allocation":0.6363      ,"amount" : 0.6363 * self.total_contribution },
+           "above_70": {"allocation":0.84        ,"amount" : 0.84   * self.total_contribution },
+       },
+       "ra": {
+           "56_to_60": {"allocation":0.3076,    "amount" : self.total_contribution * 0.3076 },
+           "61_to_65": {"allocation":0.4042,    "amount" : self.total_contribution * 0.4042 },
+           "66_to_70": {"allocation":0.303,     "amount" : self.total_contribution * 0.303 },
+           "above_70": {"allocation":0.08 ,     "amount" : self.total_contribution * 0.08  }
+       }
+                                                },  
+            }
+        allocation.update(mydict)
+        with open ('cpf_config.json', 'w') as file:
+            json.dump(allocation, file, indent=4)
+       # self.config.add_key_value(allocation, None)
+       # self.config.save()
 
-
-    def calculate_combined_balance(self, age):
+    def calculate_combined_balance(self):
         ''' calculate the combined balance based on age '''
         oa_balance = 0.0
         sa_balance = 0.0
         ma_balance = 0.0
         ra_balance = 0.0
-        if not isinstance(age, int):
-            raise ValueError("Age must be an integer")
-        if age < 55:
+        
+        
+        if self.age < 55:
             #                       10_000                     -->  10_000
             oa_balance = min(getattr(self, '_oa_balance', 0), 20_000)
             #                       50_000                    -->   40_000       
@@ -507,7 +584,7 @@ class CPFAccount:
                 return oa_balance, sa_balance, ma_balance, 0.00
             ra_balance = 0.00
             return oa_balance, sa_balance, ma_balance, ra_balance
-        elif age >= 55:
+        elif self.age >= 55:
             #                       50000                     -->  20000
             oa_balance = min(getattr(self, '_oa_balance', 0), 20_000)
            # sa_balance = min(getattr(self, '_sa_balance', 0), 10_000)
@@ -521,188 +598,147 @@ class CPFAccount:
                 return oa_balance, sa_balance, ma_balance, ra_balance
             return oa_balance, sa_balance, ma_balance, ra_balance                                                                                                                     
         
-    def calculate_interest_on_cpf(self, account: str, age: int, amount: float):
-        """Apply interest to all CPF accounts at the end of the year.
+    def calculate_interest_on_cpf(self, account: str, amount: float) -> float:
+        """
+        Apply interest to all CPF accounts at the end of the year.
         This is called every December - 12 of every year.
         """
-        
-        
-        interest_rates = self.config.get('interest_rates', {})
-       
+        # Retrieve interest rates from the configuration
+        oa_rate = self.config.getdata(['interest_rates', 'oa_below_55'], 2.5) if self.age < 55 else self.config.getdata(['interest_rates', 'oa_above_55'], 4.0)
+        sa_rate = self.config.getdata(['interest_rates', 'sa'], 4.0)
+        ma_rate = self.config.getdata(['interest_rates', 'ma'], 4.0)
+        ra_rate = self.config.getdata(['interest_rates', 'ra'], 4.0)
 
-        # Base interest rates
-        oa_rate = interest_rates.get('oa_below_55', 2.5) if age < 55 else interest_rates.get('oa_above_55', 4.0)
-        sa_rate = interest_rates.get('sa', 4.0)
-        ma_rate = interest_rates.get('ma', 4.0)
-        ra_rate = interest_rates.get('ra', 4.0)
-        # account is either oa, sa, ma, ra
+        # Calculate interest based on the account type
         if account == 'oa':
-            return ((oa_rate / 100 / 12) * amount ).__round__(2)
+            return round((oa_rate / 100 / 12) * amount, 2)
         elif account == 'sa':
-            return ((sa_rate / 100 / 12) * amount ).__round__(2)
+            return round((sa_rate / 100 / 12) * amount, 2)
         elif account == 'ma':
-            return ((ma_rate / 100 / 12) * amount ).__round__(2)
+            return round((ma_rate / 100 / 12) * amount, 2)
         elif account == 'ra':
-            return ((ra_rate / 100 / 12) * amount ).__round__(2)
+            return round((ra_rate / 100 / 12) * amount, 2)
         else:
             raise ValueError("Invalid account type. Must be 'oa', 'sa', 'ma', or 'ra'.")
             
                                                                                                            
-    def calculate_extra_interest(self, age: int):
-        """Apply extra interest to SA and MA accounts based on age.
-        this is called every December - 12 of every year
-        "extra_interest": {
-            "below_55": 1.0,
-            "first_30k_above_55": 2.0,
-            "next_30k_above_55": 1.0
-            },
+    def calculate_extra_interest(self):
         """
-        extra_interest = self.config.get('extra_interest', {}) 
+        Apply extra interest to SA and MA accounts based on age.
+        This is called every December - 12 of every year.
+        """
+        extra_interest = self.config.getdata(['extra_interest'], {})
+        extra_interest_rate = self.config.getdata(['extra_interest', 'below_55'], 1.0)
+        extra_interest1 = self.config.getdata(['extra_interest', 'first_30k_above_55'], 2.0)
+        extra_interest2 = self.config.getdata(['extra_interest', 'next_30k_above_55'], 1.0)
         oa_interest = 0.0
         sa_interest = 0.0
         ma_interest = 0.0
         ra_interest = 0.0
-        oa_balance,sa_balance,ma_balance,ra_balance = self.calculate_combined_balance(age)
-        if age < 55:
-           # oa_balance,sa_balance,ma_balance,ra_balance = self.calculate_combined_balance(age)
-            extra_interest = extra_interest.get('below_55', 1.0)
-            oa_interest = oa_balance * (extra_interest / 100 / 12)
-            sa_interest = sa_balance * (extra_interest / 100 / 12)
-            ma_interest = ma_balance * (extra_interest / 100 / 12)
+        oa_balance, sa_balance, ma_balance, ra_balance = self.calculate_combined_balance()
+
+        if self.age < 55:
+            oa_interest = oa_balance * (extra_interest_rate / 100 / 12)
+            sa_interest = sa_balance * (extra_interest_rate / 100 / 12)
+            ma_interest = ma_balance * (extra_interest_rate / 100 / 12)
             ra_interest = 0.0
             return (0, oa_interest + sa_interest, ma_interest, ra_interest)
-        elif age >= 55 :
-            extra_interest1 = extra_interest.get('first_30k_above_55', 2.0)       
-            extra_interest2 = extra_interest.get('next_30k_above_55', 1.0)
-          #  oa_balance, sa_balance,ma_balance,ra_balance = self.calculate_combined_balance_above_55_1(age)
-            first_30k = min((oa_balance+sa_balance+ma_balance+ra_balance),30_000)
-            next_30k = min(oa_balance+sa_balance+ma_balance+ra_balance-first_30k,30_000)                                       
-            if first_30k == 30_000:                                            
+        elif self.age >= 55:
+            first_30k = min((oa_balance + sa_balance + ma_balance + ra_balance), 30_000)
+            next_30k = min(oa_balance + sa_balance + ma_balance + ra_balance - first_30k, 30_000)
+
+            if first_30k == 30_000:
                 ra_interest = 30_000 * (extra_interest1 / 100 / 12)
             elif next_30k == 30_000:
-                ra_interest =  30_000 * (extra_interest2 / 100 / 12)
+                ra_interest = 30_000 * (extra_interest2 / 100 / 12)
             else:
-                ra_interest = 0.0        
-        return (oa_interest, sa_interest, ma_interest, ra_interest)
-                                                                        
+                ra_interest = 0.0
+
+            return (oa_interest, sa_interest, ma_interest, ra_interest)
     
-    def get_cpf_contribution_rate(self, age:int,is_employee:bool)-> float:
-        ''' this is called in different age group 
-                "cpf_contribution_rates": {
-            "below_55": {
-                "employee": 0.2,
-                "employer": 0.17
-            },
-            "55_to_60": {
-                "employee": 0.15,
-                "employer": 0.14
-            },
-            "60_to_65": {
-                "employee": 0.09,
-                "employer": 0.1
-            },
-            "65_to_70": {
-                "employee": 0.075,
-                "employer": 0.085
-            },
-            "above_70": {
-                "employee": 0.05,
-                "employer": 0.075
-            }
-        '''
-        cont_dict = self.config.get('cpf_contribution_rates', {})
-        d_below_55 = cont_dict.get('below_55', {})
-        
-        d__55to60  = cont_dict.get('55_to_60', {})
-        d_60to65 = cont_dict.get('60_to_65', {})
-        d_65to70 = cont_dict.get('65_to_70', {})
-        
-        
-        # Use config.get() to access configuration values
+    def get_cpf_contribution_rate(self, age: int, is_employee: bool) -> float:
+        """
+        Retrieve CPF contribution rate based on age and employment status.
+        """
         if age < 55:
-            employee_rate : float =  d_below_55.get('employee',{}) 
-            employer_rate : float =  d_below_55.get('employer',{})
-        elif 55 <= age < 60:#
-            employee_rate : float  = d__55to60.get('employee',{})
-            employer_rate : float  = d__55to60.get('employer',{})
-        elif 60 <= age < 65:#
-            employee_rate : float  =  d_60to65.get('employee',{})
-            employer_rate : float  =  d_60to65.get('employer',{})
+            rates = self.config.getdata(['cpf_contribution_rates', 'below_55'], {})
+        elif 55 <= age < 60:
+            rates = self.config.getdata(['cpf_contribution_rates', '55_to_60'], {})
+        elif 60 <= age < 65:
+            rates = self.config.getdata(['cpf_contribution_rates', '60_to_65'], {})
         elif 65 <= age < 70:
-            employee_rate : float =  d_65to70.get('employee',{}) 
-            employer_rate : float =  d_65to70.get('employer',{}) 
+            rates = self.config.getdata(['cpf_contribution_rates', '65_to_70'], {})
         else:
-            employee_rate : float = 0.0
-            employer_rate : float =    0.0
-        if is_employee:
-            return employee_rate 
-        else :
-            return employer_rate
+            rates = self.config.getdata(['cpf_contribution_rates', 'above_70'], {})
+
+        rate_key = 'employee' if is_employee else 'employer'
+        if age < 55:
+            age_bracket = 'below_55'
+        elif 55 <= age < 60:
+            age_bracket = '55_to_60'
+        elif 60 <= age < 65:
+            age_bracket = '60_to_65'
+        elif 65 <= age < 70:
+            age_bracket = '65_to_70'
+        else:
+            age_bracket = 'above_70'
+        return self.config.getdata(['cpf_contribution_rates', age_bracket, rate_key], 0.0)
     
      
     
-    def calculate_cpf_contribution(self, salary: float, age: int, is_employee: bool, config: ConfigLoader) -> float:
-        """Calculates CPF contribution based on salary, age, and employment status.
-        "cpf_contribution_rates": {
-    "below_55": {
-        "employee": 0.2,
-        "employer": 0.17
-    },
-    "55_to_60": {
-        "employee": 0.15,
-        "employer": 0.14
-    },
-    "60_to_65": {
-        "employee": 0.09,
-        "employer": 0.1
-    },
-    "65_to_70": {
-        "employee": 0.075,
-        "employer": 0.085
-    },
-    "above_70": {
-        "employee": 0.05,
-        "employer": 0.075
-    }
+    def calculate_cpf_contribution(self, is_employee: bool) -> float:
         """
-        # Use config.get() to access configuration values
-        capped_salary: float = min(salary, config.get('salary_cap', 0)) # Added default for safety
-
-        rates = config.get('cpf_contribution_rates', {}) # Added default for safety
+        Calculates CPF contribution based on salary, age, and employment status.
+        """
+        capped_salary = min(self.salary, self.config.getdata(['salary_cap'], 0))
 
         # Determine the correct age bracket for contribution rates
-        if age <= 55:
+        if self.age <= 55:
             age_bracket = 'below_55'
-        elif 55 < age <= 60:
+        elif 55 < self.age <= 60:
             age_bracket = '55_to_60'
-        elif 60 < age <= 65:
+        elif 60 < self.age <= 65:
             age_bracket = '60_to_65'
-        elif 65 < age <= 70:
+        elif 65 < self.age <= 70:
             age_bracket = '65_to_70'
-        else: # age > 70
+        else:  # age > 70
             age_bracket = 'above_70'
 
-        contribution_rate_info = rates.get(age_bracket, {}) # Added default for safety
+        # Retrieve the contribution rate
+        rate_key = 'employee' if is_employee else 'employer'
+        rate = self.config.getdata(['cpf_contribution_rates', age_bracket, rate_key], 0.0)
 
+        # Calculate the contribution
+        contribution = capped_salary * rate
         if is_employee:
-            rate = contribution_rate_info.get('employee', 0.0) # Added default for safety
-            contribution = capped_salary * rate
-        else: # Employer contribution
-            rate = contribution_rate_info.get('employer', 0.0) # Added default for safety
-            contribution = capped_salary * rate
+            self.employee_contribution = contribution
+        else:
+            self.employer_contribution = contribution
 
         return contribution
 
-    def calculate_cpf_payout(self, age: int) -> float:
+    def calculate_total_contributions(self) -> float:
+        """
+        Calculates the total CPF contributions (employee + employer) based on salary and age.
+        Updates the `self.total_contribution` attribute.
+        """
+        # Calculate employee and employer contributions
+        employee_contribution = self.calculate_cpf_contribution(is_employee=True)
+        employer_contribution = self.calculate_cpf_contribution(is_employee=False)
+
+        # Update the total contributions
+        self.total_contribution = employee_contribution + employer_contribution
+        #return self.total_contribution
+        setattr(self, 'total_contribution', self.total_contribution)
+
+    def calculate_cpf_payout(self) -> float:
         """Calculates the CPF payout amount based on age and retirement sum.
         only starts at the age of 67
         """
-        payout_age = self.config.get('cpf_payout_age', 65)  # Default payout age if not specified
-        retirement_sums = self.config.get('retirement_sums', {})
-        brs_info = retirement_sums.get('brs', {})
-        brs_payout = brs_info.get('payout', 0.0)  # Default payout if not specified
+        payout_age = self.config.getdata(['cpf_payout_age'], 65)
+        brs_payout = self.config.getdata(['retirement_sums', 'brs', 'payout'], 0.0)
 
-        if age >= payout_age:
+        if self.age >= payout_age:
             return brs_payout
         else:
             return 0.0  # No payout before payout age
@@ -737,55 +773,36 @@ class CPFAccount:
             return 0.0
         
 
-    def loan_computation(self):
-        ''' this is called every month to calculate the loan payment '''
-        '''" Calculate the loan payment to be deducted from the outstanding loan every month
-        loan_payments": {
-           "year_1_2": 1687.39,
-           "year_3": 1782.27,
-           "year_4_beyond": 1817.49
-        ,'''
+    def loan_computation(self) -> float:
+        """
+        Calculates the loan payment amount based on the current loan balance and age.
+        """
         if self._loan_balance <= 0:
             return 0.0
-        else : 
-            theyear = self.current_date.year - self.start_date.year
-            if theyear < 3:
-                return self._loan_balance * 0.03 / 12
-            else:
-                return self._loan_balance * 0.03 / 12
-        loan_payments = self.config.get(['loan_payments','year_1_2'], {}) #1687.39
-        payment_key = 'year_1_2' if age < 24 else 'year_3'
-        loan_payment_amount = float(loan_payments.get(payment_key, 0.0))
+
+        # Determine the loan payment key based on age
+        payment_key = 'year_1_2' if self.age < 24 else 'year_3'
+        loan_payment_amount = self.config.getdata(['loan_payments', payment_key], 0.0)
         return loan_payment_amount
 
 if __name__ == "__main__":
-    # Example usage
-    with CPFAccount(config) as cpf:
-        # Example of setting balances
+    try:
         config_loader = ConfigLoader('cpf_config.json')
-        start_date = config_loader.get('start_date',{})
-        end_date = config_loader.get('end_date',{})
-        birth_date = config_loader.get('birth_date',{})
-        if isinstance(start_date, datetime):
-            start_date = start_date.date()
-        if isinstance(end_date, datetime):
-            end_date = end_date.date()
-        if isinstance(birth_date, datetime):
-            birth_date = birth_date.date()
-        salary = config_loader.get('salary',{})
-        cpf.current_date = date(2029,7,1)
+        mycpf = CPFAccount(config_loader=config_loader)
+        ages = [25, 55, 60, 65, 70, 75]
+        for age in ages:
+            mycpf.age = age
+            mycpf.salary = 5000  # Example salary
+            contribution = mycpf.calculate_cpf_contribution(is_employee=True)
+            print(f"Age: {age}, Employee Contribution: {contribution}")
+
+        # Test salary cap retrieval
+            salary_cap = config_loader.getdata(['salary_cap'], 0)
+            print(f"Salary Cap: {salary_cap}")
+
+        # Test CPF contribution calculation
         
-        
-        
-        
-        age = 55
-        cpf._oa_balance = 106500
-        cpf._sa_balance = 60
-        cpf._ma_balance = 30
-        cpf._ra_balance = 40
-        cpf._loan_balance = 50
-        cpf._excess_balance = 0
-        print(isinstance(cpf.start_date , datetime))
-        print(f'Balances before {cpf._oa_balance=}, {cpf._sa_balance=}, {cpf._ma_balance=}, {cpf._ra_balance=}, {cpf._loan_balance=}, {cpf._excess_balance=}')
-       # cpf.transfer_to_ra(age=age, retirement_type='basic')
-        print(f'Balances after  {cpf._oa_balance=}, {cpf._sa_balance=}, {cpf._ma_balance=}, {cpf._ra_balance=}, {cpf._loan_balance=}, {cpf._excess_balance=}')
+    
+
+    except Exception as e:
+        print(f"An error occurred: {e}")

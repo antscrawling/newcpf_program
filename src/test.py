@@ -1,8 +1,11 @@
 
+import json
 
+mydict = {}
 
-from src.xcpf_config_loader_v3 import ConfigLoader
-
-
-config = ConfigLoader('cpf_config.json')
-print(config.data)
+with open('xcpf_config.json', 'r') as f:
+    mydict = json.load(f)
+    
+with open('cpf_config.json', 'w') as f:
+    json.dump(mydict, f, indent=4)
+ 

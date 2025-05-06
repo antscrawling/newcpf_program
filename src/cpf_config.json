@@ -1,10 +1,85 @@
 {
-    "cpf_payout_age":67,
-    "age_of_brs" : 55,
+    "allocation_below_55": {
+        "oa": {
+            "allocation": 0.6217,
+            "amount": 1702.2146
+        },
+        "sa": {
+            "allocation": 0.1621,
+            "amount": 443.8298
+        },
+        "ma": {
+            "allocation": 0.2162,
+            "amount": 591.9556
+        }
+    },
+    "allocation_above_55": {
+        "oa": {
+            "56_to_60": {
+                "allocation": 0.3694,
+                "amount": 1011.4172
+            },
+            "61_to_65": {
+                "allocation": 0.149,
+                "amount": 407.962
+            },
+            "66_to_70": {
+                "allocation": 0.0607,
+                "amount": 166.1966
+            },
+            "above_70": {
+                "allocation": 0.08,
+                "amount": 219.04
+            }
+        },
+        "sa": {
+            "allocation": 0.0,
+            "amount": 0.0
+        },
+        "ma": {
+            "56_to_60": {
+                "allocation": 0.323,
+                "amount": 884.374
+            },
+            "61_to_65": {
+                "allocation": 0.4468,
+                "amount": 1223.3383999999999
+            },
+            "66_to_70": {
+                "allocation": 0.6363,
+                "amount": 1742.1894
+            },
+            "above_70": {
+                "allocation": 0.84,
+                "amount": 2299.92
+            }
+        },
+        "ra": {
+            "56_to_60": {
+                "allocation": 0.3076,
+                "amount": 842.2088
+            },
+            "61_to_65": {
+                "allocation": 0.4042,
+                "amount": 1106.6996
+            },
+            "66_to_70": {
+                "allocation": 0.303,
+                "amount": 829.614
+            },
+            "above_70": {
+                "allocation": 0.08,
+                "amount": 219.04
+            }
+        }
+    },
+    "cpf_payout_age": 67,
+    "age_of_brs": 55,
     "start_date": "2025-04-01",
     "end_date": "2080-07-31",
     "birth_date": "1974-07-06",
     "salary": 7400,
+    "loan_amount": 300000,
     "interest_rates": {
         "oa_below_55": 2.5,
         "oa_above_55": 4.0,
@@ -31,28 +106,18 @@
             "payout": 3300
         }
     },
-    "oa_balance": 166918.94,
-    "sa_balance": 254014.32,
-    "ma_balance": 73729.14,
-    "ra_balance": 0.00,
-    "excess_balance": 0.00,
-    "loan_balance": 251101.00,
+    "oa_balance": 167892.11,
+    "sa_balance": 253163.35,
+    "ma_balance": 72952.37,
+    "ra_balance": 0.0,
+    "excess_balance": 0.0,
+    "loan_balance": 251101.0,
     "loan_payments": {
         "year_1_2": 1687.39,
-        "year_3": 1782.27,
+        "year_3": 9999.99,
         "year_4_beyond": 1817.49
     },
     "salary_cap": 7400,
-    "allocation_below_55": {
-        "oa": 0.23,
-        "sa": 0.06,
-        "ma": 0.08
-    },
-    "allocation_above_55": {
-        "oa": 0.115,
-        "ra": 0.105,
-        "ma": 0.075
-    },
     "cpf_contribution_rates": {
         "below_55": {
             "employee": 0.2,
@@ -75,5 +140,36 @@
             "employer": 0.075
         }
     },
-    "NEW_KEY": "New Value"
+    "NEW_KEY": "New Value Example",
+    "2": "test",
+    "some_list_there": [
+        1,
+        2,
+        3
+    ],
+    "oa": {
+        "oa": 0.0,
+        "sa": 0.0,
+        "ma": 0.0,
+        "ra": 0.0
+    },
+    "amount": 0.0,
+    "sa": {
+        "oa": 0.0,
+        "sa": 0.0,
+        "ma": 0.0,
+        "ra": 0.0
+    },
+    "ma": {
+        "oa": 0.0,
+        "sa": 0.0,
+        "ma": 0.0,
+        "ra": 0.0
+    },
+    "ra": {
+        "oa": 0.0,
+        "sa": 0.0,
+        "ma": 0.0,
+        "ra": 0.0
+    }
 }
