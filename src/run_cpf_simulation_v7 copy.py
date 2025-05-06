@@ -230,81 +230,6 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                 is_display_special_july = False   
                                                        
 
-def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
-    """
-    Load a log file and resave it as a JSON file.
-
-    :param log_filepath: Path to the log file.
-    :param output_json_filepath: Path to save the JSON file.
-    """
-    if not os.path.exists(log_filepath):
-        print(f"Log file '{log_filepath}' does not exist.")
-        return
-
-    try:
-        
-        import json
-        from src.cpf_data_saver_v2 import DataSaver
-        from datetime import datetime, date
-        from typing import Any, Union, List
-        with open('cpf_logs20250507.json', 'r') as f:
-            logs = [json.loads(line) for line in f]
-
-
-        #convert list to dictionary
-        for item in logs:
-            if isinstance(item, dict):
-                for key, value in item.items():
-                    if isinstance(value, (datetime, date)):
-                        item[key] = value.strftime("%Y-%m-%d")
-                    elif isinstance(value, list):
-                        item[key] = [v.strftime("%Y-%m-%d") if isinstance(v, (datetime, date)) else v for v in value]
-                    elif isinstance(value, str|int|float):
-                       # item[key] = value
-                        #try:
-                        #    item[key] = datetime.strptime(value, "%Y-%m-%d").date()
-                        #except ValueError:
-                        #    pass  # not a date-formatted string
-                        item[key] = value
-        #logs = {log['account']: log for log in logs}    
-
-
-
-        ##save using datasaver
-        #ds = DataSaver(format='json')
-        #for log in logs:
-        #    ds.append(log)
-
-        DATE_FORMAT = "%Y-%m-%d"
-        config_path = log_filepath
-        output_path = 'updatedlogs.json'
-
-        serializable_data = {}
-        with open(output_path, 'w') as f:
-            json.dump(logs, f, default=str, indent=4)
-
-
-
-    except Exception as e:
-        print(f"Error processing log file: {e}")
-        return
-
-
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-
 if __name__ == "__main__":
     mydict = {}
     mydict = {
@@ -384,6 +309,3 @@ if __name__ == "__main__":
     }
     }
     main(dicct = mydict)
-    log_filepath = "simulation.log"  # Replace with the actual log file path
-    output_json_filepath = "simulation_output.json"  # Replace with the desired JSON file path
-    load_and_resave_log_as_json(log_filepath, output_json_filepath)

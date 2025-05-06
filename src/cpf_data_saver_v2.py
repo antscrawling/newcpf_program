@@ -48,7 +48,10 @@ class DataSaver:
         if self.format == 'pickle':
             pickle.dump(item, self._file)
         elif self.format == 'json':
-            self._data_list.append(item)
+            if isinstance(item, dict):
+                self._data_list.append(item)
+            else:
+                raise ValueError("Item must be a dictionary for JSON format.")
         elif self.format == 'shelve':
             index = len(self._shelf)
             self._shelf[str(index)] = item

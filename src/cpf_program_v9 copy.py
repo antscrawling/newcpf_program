@@ -7,7 +7,6 @@ from pprint import pprint
 import json
 from cpf_config_loader_v4 import ConfigLoader
 from cpf_reconfigure_date_v2 import MyDateTime
-from cpf_data_saver_v2 import DataSaver  # Import DataSaver class
 
 from collections import OrderedDict
 import inspect
@@ -20,21 +19,19 @@ config = ConfigLoader('cpf_config.json')
 # Define the worker function at the top level (outside the class)
 def _save_log_worker(queue, filename):
     """Worker process to save logs to a file."""
-    data_saver = DataSaver(format='json')  # Use DataSaver with JSON format
-    try:
+    with open(filename, 'a') as file:
         while True:
             try:
                 log_entry = queue.get(timeout=1)  # Wait for a log entry with a timeout
                 if log_entry == "STOP":
                     break
-                # Save the log entry using DataSaver
-                data_saver.append(log_entry)
+                # Use the top-level serializer function
+                file.write(json.dumps(log_entry, default=custom_serializer) + '\n')
             except Exception:  # Consider more specific exception handling (e.g., queue.Empty)
                 # Handle timeout or other exceptions gracefully
+                # Check if the queue is empty after timeout before continuing
                 if queue.empty():
                     continue
-    finally:
-        data_saver.close()  # Ensure DataSaver is properly closed
 
 # Define the custom serializer at the top level or as a static method
 def custom_serializer(obj):
@@ -43,6 +40,8 @@ def custom_serializer(obj):
         return obj.strftime("%Y-%m-%d %H:%M:%S")
     # It's better to raise TypeError for unhandled types
     raise TypeError(f"Type {type(obj)} not serializable")
+
+
 
 class CPFAccount:
     def __init__(self, config_loader):  # Accept config_loader
@@ -809,16 +808,6 @@ if __name__ == "__main__":
             employer_contribution = mycpf.calculate_cpf_contribution(is_employee=False)
             total_contribution = employee_contribution + employer_contribution
             print(f"Age: {age}, Employee Contribution: {employee_contribution}, Employer Contribution: {employer_contribution}, Total Contribution: {total_contribution}")
-
-        # Test multiprocessing log writer
-        print("Testing multiprocessing log writer...")
-        mycpf.date_key = datetime.now().strftime("%Y-%m-%d")
-        mycpf.oa_balance = (1000.0, "Initial OA balance")
-        mycpf.sa_balance = (2000.0, "Initial SA balance")
-        mycpf.record_inflow("oa", 500.0, "Monthly contribution")
-        mycpf.record_outflow("sa", 300.0, "Medical expenses")
-        mycpf.close_log_writer()  # Ensure logs are flushed to the file
-        print("Log writer test completed. Check the log file for entries.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
