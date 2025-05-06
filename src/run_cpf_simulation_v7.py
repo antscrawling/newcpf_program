@@ -237,6 +237,9 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     :param log_filepath: Path to the log file.
     :param output_json_filepath: Path to save the JSON file.
     """
+    DATE_FORMAT = "%Y-%m-%d"
+    config_path = log_filepath
+    output_path =  output_json_filepath
     if not os.path.exists(log_filepath):
         print(f"Log file '{log_filepath}' does not exist.")
         return
@@ -244,11 +247,25 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     try:
         
         import json
-        from src.cpf_data_saver_v2 import DataSaver
+        from cpf_data_saver_v2 import DataSaver
         from datetime import datetime, date
         from typing import Any, Union, List
-        with open('cpf_logs20250507.json', 'r') as f:
-            logs = [json.loads(line) for line in f]
+        with open(config_path, 'r') as f:
+            # Attempt to load the entire file content as a single JSON object
+            try:
+                logs = json.load(f)
+                if not isinstance(logs, list):
+                    logs = [logs]  # Ensure it's a list for consistent processing
+            except json.JSONDecodeError:
+                # If the file contains multiple JSON objects, load it line by line
+                f.seek(0)  # Reset file pointer to the beginning
+                logs = []
+                for line in f:
+                    try:
+                        logs.append(json.loads(line))
+                    except json.JSONDecodeError as e:
+                        print(f"Skipping invalid JSON line: {line.strip()} - {e}")
+                        continue
 
 
         #convert list to dictionary
@@ -277,7 +294,7 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
 
         DATE_FORMAT = "%Y-%m-%d"
         config_path = log_filepath
-        output_path = 'updatedlogs.json'
+        output_path =  output_json_filepath
 
         serializable_data = {}
         with open(output_path, 'w') as f:
@@ -384,6 +401,10 @@ if __name__ == "__main__":
     }
     }
     main(dicct = mydict)
-    log_filepath = "simulation.log"  # Replace with the actual log file path
-    output_json_filepath = "simulation_output.json"  # Replace with the desired JSON file path
+    log_filepath = "cpf_logs.json"  # Replace with the actual log file pathfile path
+    output_json_filepath = "cpf_logs_updated.json"  # Replace with the desired JSON file pathfile path
+    # Create the file if it doesn't exist before calling the function
+    if not os.path.exists(log_filepath):
+        with open(log_filepath, 'w') as f:
+            f.write('')  # Create an empty file
     load_and_resave_log_as_json(log_filepath, output_json_filepath)

@@ -61,7 +61,7 @@ class DataSaver:
         if self.format == 'pickle':
             self._file.close()
         elif self.format == 'json':
-            with open('simulation_output.json', 'w') as f:
+            with open('cpf_logs.json', 'w') as f:
                 json.dump(self._data_list, f, default=str, indent=4)
         elif self.format == 'shelve':
             self._shelf.close()

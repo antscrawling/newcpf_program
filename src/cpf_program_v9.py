@@ -123,8 +123,8 @@ class CPFAccount:
         self.log_queue = Queue()
         # Use the top-level worker function as the target
         # Pass only the queue and filename, which are picklable
-        datestring = self.current_date.strftime("%Y%m%d")
-        self.log_process = Process(target=_save_log_worker, args=(self.log_queue, f'cpf_logs{datestring}.json'))
+       # datestring = self.current_date.strftime("%Y%m%d")
+        self.log_process = Process(target=_save_log_worker, args=(self.log_queue, 'cpf_logs.json'))
         self.log_process.daemon = True  # Ensure the process terminates with the main program
         self.log_process.start()
 
