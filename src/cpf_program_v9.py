@@ -1,19 +1,12 @@
 import atexit
-from datetime import datetime, timedelta, date
-from dataclasses import dataclass
-from dateutil.relativedelta import relativedelta
-from pprint import pprint
+from datetime import datetime
 #from dateutility import  MyDateDictGenerator
 import json
 from cpf_config_loader_v4 import ConfigLoader
-from cpf_reconfigure_date_v2 import MyDateTime
 
 from cpf_data_saver_v2 import DataSaver  # Import DataSaver class
 
-from collections import OrderedDict
-import inspect
 from multiprocessing import Process, Queue
-from queue import Empty
 
 # Load configuration
 config = ConfigLoader('cpf_config.json')
@@ -444,7 +437,8 @@ class CPFAccount:
         # Set the new balance using the provided value
         setattr(self, f"_{account}_balance", new_balance)
 
-    def record_inflow(self, account: str, amount: float, message: str = None):
+    def record_inflow(self, account: str, amount: float, message: str = "") -> None:
+        """Records an inflow of funds into a specified account."""
         valid_accounts = ['oa', 'sa', 'ma', 'ra', 'loan', 'excess']
         if account not in valid_accounts:
             print(f"Error: Invalid account name for record_inflow: {account}")
@@ -460,7 +454,8 @@ class CPFAccount:
         # Use the property setter to update balance and trigger logging
         setattr(self, f"{account}_balance", (new_balance.__round__(2), message))
 
-    def record_outflow(self, account: str, amount: float, message: str = None):
+    def record_outflow(self, account: str, amount: float, message: str = "") -> None:
+        """Records an outflow of funds from a specified account."""
         valid_accounts = ['oa', 'sa', 'ma', 'ra', 'loan', 'excess']
         if account not in valid_accounts:
             print(f"Error: Invalid account name for record_outflow: {account}")
@@ -476,6 +471,18 @@ class CPFAccount:
         # Use the property setter to update balance and trigger logging
         setattr(self, f"{account}_balance", (new_balance.__round__(2), message ))
 
+    def insert_data(self, conn, date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout):
+        """Inserts CPF data into the database."""
+        try:
+            sql = f"""
+                INSERT OR REPLACE INTO cpf_data (date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout)
+                VALUES ('{date_key}', {age}, {oa_balance}, {sa_balance}, {ma_balance}, {ra_balance}, {loan_balance}, {excess_balance}, {cpf_payout});
+            """
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database insertion error: {e}")
 
     def calculate_cpf_allocation(self, account: str) -> float:
         """

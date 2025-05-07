@@ -1,6 +1,6 @@
 [
     {
-        "date": "2025-05-07 20:02:03",
+        "date": "2025-05-07 22:26:13",
         "account": "oa",
         "old_balance": 0.0,
         "new_balance": 167892.11,
@@ -9,7 +9,7 @@
         "message": "oa-Initial Balance of oa-167892.11"
     },
     {
-        "date": "2025-05-07 20:02:03",
+        "date": "2025-05-07 22:26:13",
         "account": "sa",
         "old_balance": 0.0,
         "new_balance": 253163.35,
@@ -18,7 +18,7 @@
         "message": "sa-Initial Balance of sa-253163.35"
     },
     {
-        "date": "2025-05-07 20:02:03",
+        "date": "2025-05-07 22:26:13",
         "account": "ma",
         "old_balance": 0.0,
         "new_balance": 72952.37,
@@ -27,7 +27,7 @@
         "message": "ma-Initial Balance of ma-72952.37"
     },
     {
-        "date": "2025-05-07 20:02:03",
+        "date": "2025-05-07 22:26:13",
         "account": "loan",
         "old_balance": 0.0,
         "new_balance": 251101.0,

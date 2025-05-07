@@ -1,14 +1,8 @@
-from multiprocessing import Process, Queue
 from cpf_config_loader_v4 import ConfigLoader
 from cpf_program_v9 import CPFAccount
-from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar
-from pprint import pprint  # For pretty-printing the dictionary
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
 from cpf_date_generator_v4 import DateGenerator
 import os
-import json
 
 
 def loan_computation_first_three_years(cpf):
@@ -90,17 +84,17 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
             # loan payments
             
             if year == 1 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty1, message=f"Loan payment for OA at year 1")
-                cpf.record_outflow(account='loan', amount=loan_paymenty1, message=f"Loan payment for OA at year 1")
+                cpf.record_inflow(account='oa', amount=loan_paymenty1, message="Loan payment for OA at year 1")
+                cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment for OA at year 1")
             elif year == 2 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty1, message=f"Loan payment for OA at year 2")
-                cpf.record_outflow(account='loan', amount=loan_paymenty1, message=f"Loan payment for OA at year 1")
+                cpf.record_inflow(account='oa', amount=loan_paymenty1, message="Loan payment for OA at year 2")
+                cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment for OA at year 1")
             elif year == 3 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty3, message=f"Loan payment for OA at year 3")
-                cpf.record_outflow(account='loan', amount=loan_paymenty3, message=f"Loan payment for OA at year 1")
+                cpf.record_inflow(account='oa', amount=loan_paymenty3, message="Loan payment for OA at year 3")
+                cpf.record_outflow(account='loan', amount=loan_paymenty3, message="Loan payment for OA at year 1")
             elif year >= 4 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty4, message=f"Loan payment for OA at year 4")
-                cpf.record_outflow(account='loan', amount=loan_paymenty4, message=f"Loan payment for OA at year 1")
+                cpf.record_inflow(account='oa', amount=loan_paymenty4, message="Loan payment for OA at year 4")
+                cpf.record_outflow(account='loan', amount=loan_paymenty4, message="Loan payment for OA at year 1")
             year += 1
             # Increment the year counter           
             if cpf.age < 55:    
@@ -247,9 +241,7 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     try:
         
         import json
-        from cpf_data_saver_v2 import DataSaver
         from datetime import datetime, date
-        from typing import Any, Union, List
         with open(config_path, 'r') as f:
             # Attempt to load the entire file content as a single JSON object
             try:

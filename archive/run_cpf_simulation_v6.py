@@ -1,14 +1,7 @@
-from multiprocessing import Process, Queue
 from cpf_config_loader_v3 import ConfigLoader
 from cpf_program_v8 import CPFAccount
-from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar
-from pprint import pprint  # For pretty-printing the dictionary
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
 from cpf_date_generator_v3 import DateGenerator
-import os
-import json
 
 def loan_computation_first_three_years(cpf, age, date_key, date_info, config_loader):
     loan_payments = config_loader.get('loan_payments', {})

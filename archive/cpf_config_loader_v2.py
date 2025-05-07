@@ -2,7 +2,6 @@ import json
 from datetime import datetime, date
 import os
 from calendar import monthrange
-from typing import Any  # Import Any for type hinting
 
 DATE_FORMAT = "%Y-%m-%d"
 

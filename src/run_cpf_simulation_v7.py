@@ -1,15 +1,149 @@
-from multiprocessing import Process, Queue
 from cpf_config_loader_v4 import ConfigLoader
 from cpf_program_v9 import CPFAccount
-from cpf_reconfigure_date_v2 import MyDateTime
 from tqdm import tqdm  # For the progress bar
-from pprint import pprint  # For pretty-printing the dictionary
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
 from cpf_date_generator_v4 import DateGenerator
 import os
+import sqlite3
+from datetime import datetime
+from pydantic import BaseModel  # Import BaseModel
+from typing import Dict, Any
 import json
 
+# Load the configuration file
+with open("src/cpf_config.json", "r") as f:
+    config_data = json.load(f)
+
+# Define Pydantic models based on the structure of the config data
+class Allocation(BaseModel):
+    allocation: float
+    amount: float
+
+class AgeAllocation(BaseModel):
+    allocation: float
+    amount: float
+
+class OaAllocationAbove55(BaseModel):
+    _56_to_60: AgeAllocation
+    _61_to_65: AgeAllocation
+    _66_to_70: AgeAllocation
+    above_70: AgeAllocation
+
+class MaAllocationAbove55(BaseModel):
+    _56_to_60: AgeAllocation
+    _61_to_65: AgeAllocation
+    _66_to_70: AgeAllocation
+    above_70: AgeAllocation
+
+class RaAllocationAbove55(BaseModel):
+    _56_to_60: AgeAllocation
+    _61_to_65: AgeAllocation
+    _66_to_70: AgeAllocation
+    above_70: AgeAllocation
+
+class AllocationBelow55(BaseModel):
+    oa: Allocation
+    sa: Allocation
+    ma: Allocation
+
+class AllocationAbove55(BaseModel):
+    oa: OaAllocationAbove55
+    sa: Allocation
+    ma: MaAllocationAbove55
+    ra: RaAllocationAbove55
+
+class InterestRates(BaseModel):
+    oa_below_55: float
+    oa_above_55: float
+    sa: float
+    ma: float
+    ra: float
+
+class ExtraInterest(BaseModel):
+    below_55: float
+    first_30k_above_55: float
+    next_30k_above_55: float
+
+class RetirementSumsAmount(BaseModel):
+    amount: float
+    payout: float
+
+class RetirementSums(BaseModel):
+    brs: RetirementSumsAmount
+    frs: RetirementSumsAmount
+    ers: RetirementSumsAmount
+
+class LoanPayments(BaseModel):
+    year_1_2: float
+    year_3: float
+    year_4_beyond: float
+
+class CpfContributionRates(BaseModel):
+    employee: float
+    employer: float
+
+class AgeBasedContributionRates(BaseModel):
+    below_55: CpfContributionRates
+    _55_to_60: CpfContributionRates
+    _60_to_65: CpfContributionRates
+    _65_to_70: CpfContributionRates
+    above_70: CpfContributionRates
+
+class ConfigModel(BaseModel):
+    allocation_below_55: AllocationBelow55
+    allocation_above_55: AllocationAbove55
+    cpf_payout_age: int
+    age_of_brs: int
+    start_date: str
+    end_date: str
+    birth_date: str
+    salary: int
+    loan_amount: int
+    interest_rates: InterestRates
+    extra_interest: ExtraInterest
+    retirement_sums: RetirementSums
+    oa_balance: float
+    sa_balance: float
+    ma_balance: float
+    ra_balance: float
+    excess_balance: float
+    loan_balance: float
+    loan_payments: LoanPayments
+    salary_cap: int
+    cpf_contribution_rates: AgeBasedContributionRates
+
+# Database setup
+DATABASE_NAME = 'cpf_simulation.db'
+
+def create_connection():
+    """Creates a database connection to the SQLite database."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_NAME)
+        print(sqlite3.version)
+    except sqlite3.Error as e:
+        print(e)
+    return conn
+
+def create_table(conn):
+    """Creates a table to store CPF simulation data."""
+    try:
+        sql = """
+        CREATE TABLE IF NOT EXISTS cpf_data (
+            date_key TEXT PRIMARY KEY,
+            age INTEGER,
+            oa_balance REAL,
+            sa_balance REAL,
+            ma_balance REAL,
+            ra_balance REAL,
+            loan_balance REAL,
+            excess_balance REAL,
+            cpf_payout REAL
+        );
+        """
+        cur = conn.cursor()
+        cur.execute(sql)
+    except sqlite3.Error as e:
+        print(e)
 
 def loan_computation_first_three_years(cpf):
     # Corrected implementation for loan_payments
@@ -29,7 +163,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     start_date = config_loader.getdata('start_date', {})
     end_date = config_loader.getdata('end_date', {})
     birth_date = config_loader.getdata('birth_date', {})
-    brs_amount = config_loader.getdata(['retirement_sums','brs','amount'], {})    
+    brs_amount = config_loader.getdata('retirement_sums', {}).get('brs', {}).get('amount', 0.0)    
    
     # Validate that the dates are loaded correctly
     if not all([start_date, end_date, birth_date]):
@@ -80,155 +214,165 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
         accounts = ['oa', 'sa', 'ma', 'ra']
         year = 1
         # CPF allocation logic
-        for date_key, date_info in tqdm(date_dict.items(), desc="Processing CPF Data", unit="month", colour="blue"):
-       # for date_key in date_dict:
-       
-            cpf.date_key = date_key
-            cpf.age = date_info['age']
-            cpf.current_date = date_info['period_end']
-            
-            # loan payments
-            
-            if year == 1 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty1, message=f"Loan payment for OA at year 1")
-                cpf.record_outflow(account='loan', amount=loan_paymenty1, message=f"Loan payment for OA at year 1")
-            elif year == 2 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty1, message=f"Loan payment for OA at year 2")
-                cpf.record_outflow(account='loan', amount=loan_paymenty1, message=f"Loan payment for OA at year 1")
-            elif year == 3 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty3, message=f"Loan payment for OA at year 3")
-                cpf.record_outflow(account='loan', amount=loan_paymenty3, message=f"Loan payment for OA at year 1")
-            elif year >= 4 and cpf._loan_balance > 0:
-                cpf.record_inflow(account='oa', amount=loan_paymenty4, message=f"Loan payment for OA at year 4")
-                cpf.record_outflow(account='loan', amount=loan_paymenty4, message=f"Loan payment for OA at year 1")
-            year += 1
-            # Increment the year counter           
-            if cpf.age < 55:    
-                cpf.record_inflow(account='oa', amount=dicct['allocation_below_55']['oa']['amount'], message=f"Allocation for OA at age {cpf.age}")
-                cpf.record_inflow(account='sa', amount=dicct['allocation_below_55']['sa']['amount'], message=f"Allocation for SA at age {cpf.age}")
-                cpf.record_inflow(account='ma', amount=dicct['allocation_below_55']['ma']['amount'], message=f"Allocation for MA at age {cpf.age}")
-
-            elif cpf.age == 55 and cpf.current_date.month == 7 and cpf.current_date.year  == 2029:
-                      
-                cpf.record_inflow(account='oa', amount=dicct['allocation_below_55']['oa']['amount'], message=f"Allocation for OA at age {cpf.age}")
-                cpf.record_inflow(account='sa', amount=dicct['allocation_below_55']['sa']['amount'], message=f"Allocation for SA at age {cpf.age}")
-                cpf.record_inflow(account='ma', amount=dicct['allocation_below_55']['ma']['amount'], message=f"Allocation for MA at age {cpf.age}")
-            else:
-                if 55 <= cpf.age < 60  and cpf.current_date.month >=8 :                              
-                    age_key = '56_to_60'
-                if 60 <= cpf.age < 65:
-                    age_key = '61_to_65'
-                if 65 <= cpf.age < 70:
-                    age_key = '66_to_70'
-                else:
-                    age_key = 'above_70'
-
-                # Get the allocation amounts from the config
-                for account in ['oa', 'ma', 'ra']:
-                    if cpf.current_date.month == 7 and cpf.age == 55 and account  == 'ra':
-                        account = 'sa'
-                    elif cpf.current_date.month == 8 and cpf.age == 55 and account  == 'sa':
-                        account = 'ra'
-                    else: 
-                        account = account
-                    allocation_amount = cpf.config.getdata(['allocation_above_55',account,age_key,'amount'],0 ) # dicct.get('allocation_above_55',{}).get(account,{}).get(age_key,{}).get('amount', 0.0))
-                    cpf.record_inflow(account=account, amount=allocation_amount, message=f"Allocation for {account} at age {cpf.age}")
-                                                     
-            # Apply interest at the end of the year
-            if cpf.current_date.month == 12:
+        with create_connection() as conn:
+            create_table(conn)
+            for date_key, date_info in tqdm(date_dict.items(), desc="Processing CPF Data", unit="month", colour="blue"):
+           # for date_key in date_dict:
+           
+                cpf.date_key = date_key
+                cpf.age = date_info['age']
+                cpf.current_date = date_info['period_end']
                 
-                account_balance = 0.0
-                oa_interest = 0.0
-                sa_interest = 0.0
-                ma_interest = 0.0
-                ra_interest = 0.0
-                oa_extra_interest = 0.0
-                sa_extra_interest = 0.0
-                ma_extra_interest = 0.0
-                ra_extra_interest = 0.0                
+                # loan payments
+                
+                if year == 1 and cpf._loan_balance > 0:
+                    cpf.record_inflow(account='oa', amount=loan_paymenty1, message="Loan payment for OA at year 1")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment for OA at year 1")
+                elif year == 2 and cpf._loan_balance > 0:
+                    cpf.record_inflow(account='oa', amount=loan_paymenty1, message="Loan payment for OA at year 2")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment for OA at year 1")
+                elif year == 3 and cpf._loan_balance > 0:
+                    cpf.record_inflow(account='oa', amount=loan_paymenty3, message="Loan payment for OA at year 3")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty3, message="Loan payment for OA at year 1")
+                elif year >= 4 and cpf._loan_balance > 0:
+                    cpf.record_inflow(account='oa', amount=loan_paymenty4, message="Loan payment for OA at year 4")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty4, message="Loan payment for OA at year 1")
+                year += 1
+                # Increment the year counter           
+                if cpf.age < 55:    
+                    cpf.record_inflow(account='oa', amount=dicct['allocation_below_55']['oa']['amount'], message=f"Allocation for OA at age {cpf.age}")
+                    cpf.record_inflow(account='sa', amount=dicct['allocation_below_55']['sa']['amount'], message=f"Allocation for SA at age {cpf.age}")
+                    cpf.record_inflow(account='ma', amount=dicct['allocation_below_55']['ma']['amount'], message=f"Allocation for MA at age {cpf.age}")
 
-                for account in ['oa', 'sa', 'ma', 'ra']:
-                    cpf.message = f"Applying interest for {account} at age {cpf.age}"
-                    account_balance = getattr(cpf, f'_{account}_balance', 0.0)
-                    if account_balance > 0:
-                        if account == 'oa':
-                            #account: str, age: int, amount: float):
-                            oa_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
-                        elif account == 'sa':
-                            sa_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
-                        elif account == 'ma':
-                            ma_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
-                        elif account == 'ra':
-                            ra_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
-                        # Record the interest inflow                                                       
-                oa_extra_interest, sa_extra_interest, ma_extra_interest, ra_extra_interest = cpf.calculate_extra_interest()
-                cpf.record_inflow(account='oa', amount=oa_interest, message=f"Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='sa', amount=sa_interest, message=f"Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='ma', amount=ma_interest, message=f"Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='ra', amount=ra_interest, message=f"Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='oa', amount=oa_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='sa', amount=sa_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='ma', amount=ma_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")
-                cpf.record_inflow(account='ra', amount=ra_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")                                                                                                
+                elif cpf.age == 55 and cpf.current_date.month == 7 and cpf.current_date.year  == 2029:
+                          
+                    cpf.record_inflow(account='oa', amount=dicct['allocation_below_55']['oa']['amount'], message=f"Allocation for OA at age {cpf.age}")
+                    cpf.record_inflow(account='sa', amount=dicct['allocation_below_55']['sa']['amount'], message=f"Allocation for SA at age {cpf.age}")
+                    cpf.record_inflow(account='ma', amount=dicct['allocation_below_55']['ma']['amount'], message=f"Allocation for MA at age {cpf.age}")
+                else:
+                    if 55 <= cpf.age < 60  and cpf.current_date.month >=8 :                              
+                        age_key = '56_to_60'
+                    if 60 <= cpf.age < 65:
+                        age_key = '61_to_65'
+                    if 65 <= cpf.age < 70:
+                        age_key = '66_to_70'
+                    else:
+                        age_key = 'above_70'
 
-            # CPF payout calculation
-            cpf_payout = 0.0
-            if hasattr(cpf, 'calculate_cpf_payout'):
-                payout_result = cpf.calculate_cpf_payout()
-                if isinstance(payout_result, (int, float)):
-                    cpf_payout = payout_result
-                    cpf.record_inflow('excess', cpf_payout, f"cpf_payout_{cpf.age}")
+                    # Get the allocation amounts from the config
+                    for account in ['oa', 'ma', 'ra']:
+                        if cpf.current_date.month == 7 and cpf.age == 55 and account  == 'ra':
+                            account = 'sa'
+                        elif cpf.current_date.month == 8 and cpf.age == 55 and account  == 'sa':
+                            account = 'ra'
+                        else: 
+                            account = account
+                        allocation_amount = cpf.config.getdata(['allocation_above_55',account,age_key,'amount'],0 ) # dicct.get('allocation_above_55',{}).get(account,{}).get(age_key,{}).get('amount', 0.0))
+                        cpf.record_inflow(account=account, amount=allocation_amount, message=f"Allocation for {account} at age {cpf.age}")
+                                                         
+                # Apply interest at the end of the year
+                if cpf.current_date.month == 12:
+                    
+                    account_balance = 0.0
+                    oa_interest = 0.0
+                    sa_interest = 0.0
+                    ma_interest = 0.0
+                    ra_interest = 0.0
+                    oa_extra_interest = 0.0
+                    sa_extra_interest = 0.0
+                    ma_extra_interest = 0.0
+                    ra_extra_interest = 0.0                
+
+                    for account in ['oa', 'sa', 'ma', 'ra']:
+                        cpf.message = f"Applying interest for {account} at age {cpf.age}"
+                        account_balance = getattr(cpf, f'_{account}_balance', 0.0)
+                        if account_balance > 0:
+                            if account == 'oa':
+                                #account: str, age: int, amount: float):
+                                oa_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
+                            elif account == 'sa':
+                                sa_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
+                            elif account == 'ma':
+                                ma_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
+                            elif account == 'ra':
+                                ra_interest = cpf.calculate_interest_on_cpf(account=account,  amount=account_balance)
+                            # Record the interest inflow                                                       
+                    oa_extra_interest, sa_extra_interest, ma_extra_interest, ra_extra_interest = cpf.calculate_extra_interest()
+                    cpf.record_inflow(account='oa', amount=oa_interest, message=f"Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='sa', amount=sa_interest, message=f"Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='ma', amount=ma_interest, message=f"Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='ra', amount=ra_interest, message=f"Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='oa', amount=oa_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='sa', amount=sa_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='ma', amount=ma_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")
+                    cpf.record_inflow(account='ra', amount=ra_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")                                                                                                
+
+                # CPF payout calculation
+                cpf_payout = 0.0
+                if hasattr(cpf, 'calculate_cpf_payout'):
+                    payout_result = cpf.calculate_cpf_payout()
+                    if isinstance(payout_result, (int, float)):
+                        cpf_payout = payout_result
+                        cpf.record_inflow('excess', cpf_payout, f"cpf_payout_{cpf.age}")
 
 
 
-            # Display balances including July 2029
-            cpf.date_key = date_key
-            oa_bal = getattr(cpf, '_oa_balance', 0.0).__round__(2)
-            sa_bal = getattr(cpf, '_sa_balance', 0.0).__round__(2)
-            ma_bal = getattr(cpf, '_ma_balance', 0.0).__round__(2)
-            ra_bal = getattr(cpf, '_ra_balance', 0.0).__round__(2)
-            loan_bal = getattr(cpf, '_loan_balance', 0.0).__round__(2)
-            excess_bal = getattr(cpf, '_excess_balance', 0.0).__round__(2)
-           # display_ra = f"{'closed':<15}" if cpf._sa_balance == 0.0 else f'{float(sa_bal):<15,.2f}'
-            print(f"{date_key:<15}{cpf.age:<5}"
-                  f"{float(oa_bal):<15,.2f}{float(sa_bal):<15,.2f}"
-                  f"{float(ma_bal):<15,.2f}{float(ra_bal):<15,.2f}"
-                  f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
-                  f"{float(cpf_payout):<12,.2f}")
-            if cpf.age == 55 and cpf.current_date.month == 7:
-                is_display_special_july = True
-                orig_oa_bal = oa_bal
-                orig_sa_bal = sa_bal
-                orig_ma_bal = ma_bal
-                orig_loan_bal = loan_bal
-                orig_ra_bal = ra_bal
-                orig_excess_bal = excess_bal
-            
-                                      
-            if is_display_special_july:    
-                # Special printing for age 55 and month 7
-                display_date_key = f"{date_key}-cpf"
-                display_oa_bal = -orig_oa_bal
-                display_sa_bal = -orig_sa_bal
-                display_ma_bal = orig_ma_bal
-                display_loan_bal = -orig_loan_bal               
-                display_ra_bal =  (orig_oa_bal + orig_sa_bal - orig_loan_bal)
-                display_excess_bal = (orig_oa_bal + orig_sa_bal - orig_loan_bal - brs_amount)
-                display_cpf_payout = 0.0
-                ##                                   
-                print(f"{display_date_key:<15}{cpf.age:<4}"
-                      f"{float(display_oa_bal):<15,.2f}{display_sa_bal:<15,.2f}"
-                      f"={float(display_ma_bal):<14,.2f}+{float(display_ra_bal):<14,.2f}"
-                      f"{float(display_loan_bal):<13,.2f}{float(display_excess_bal):<12,.2f}"
-                      f"{float(display_cpf_payout):<12,.2f}")
+                # Display balances including July 2029
+                cpf.date_key = date_key
+                oa_bal = getattr(cpf, '_oa_balance', 0.0).__round__(2)
+                sa_bal = getattr(cpf, '_sa_balance', 0.0).__round__(2)
+                ma_bal = getattr(cpf, '_ma_balance', 0.0).__round__(2)
+                ra_bal = getattr(cpf, '_ra_balance', 0.0).__round__(2)
+                loan_bal = getattr(cpf, '_loan_balance', 0.0).__round__(2)
+                excess_bal = getattr(cpf, '_excess_balance', 0.0).__round__(2)
+               # display_ra = f"{'closed':<15}" if cpf._sa_balance == 0.0 else f'{float(sa_bal):<15,.2f}'
+                print(f"{date_key:<15}{cpf.age:<5}"
+                      f"{float(oa_bal):<15,.2f}{float(sa_bal):<15,.2f}"
+                      f"{float(ma_bal):<15,.2f}{float(ra_bal):<15,.2f}"
+                      f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
+                      f"{float(cpf_payout):<12,.2f}")
+                
+                # Insert data into the database
+                # Only insert data at the end of the year (December)
+                if cpf.current_date.month == 12:
+                    cpf.insert_data(conn, date_key, cpf.age, oa_bal, sa_bal, ma_bal, ra_bal, loan_bal, excess_bal, cpf_payout)
 
-                cpf.record_inflow(account= 'oa',  amount= display_oa_bal,  message= f"transfer_cpf_age={cpf.age}")
-                cpf.record_inflow(account= 'sa',  amount= display_sa_bal,  message= f"transfer_cpf_age={cpf.age}")
-                cpf.record_inflow(account= 'loan',amount= display_loan_bal,message= f"transfer_cpf_age={cpf.age}")
-                cpf.record_inflow(account= 'ra',  amount= display_ra_bal,  message= f"transfer_cpf_age={cpf.age}")
-                cpf.record_inflow(account= 'excess',amount= display_excess_bal,message= f"transfer_cpf_age={cpf.age}")
-                is_display_special_july = False   
-                                                       
+                if cpf.age == 55 and cpf.current_date.month == 7:
+                    is_display_special_july = True
+                    orig_oa_bal = oa_bal
+                    orig_sa_bal = sa_bal
+                    orig_ma_bal = ma_bal
+                    orig_loan_bal = loan_bal
+                    orig_ra_bal = ra_bal
+                    orig_excess_bal = excess_bal
+                
+                                          
+                if is_display_special_july:    
+                    # Special printing for age 55 and month 7
+                    display_date_key = f"{date_key}-cpf"
+                    display_oa_bal = -orig_oa_bal
+                    display_sa_bal = -orig_sa_bal
+                    display_ma_bal = orig_ma_bal
+                    display_loan_bal = -orig_loan_bal               
+                    display_ra_bal =  (orig_oa_bal + orig_sa_bal - orig_loan_bal)
+                    display_excess_bal = (orig_oa_bal + orig_sa_bal - orig_loan_bal - brs_amount)
+                    display_cpf_payout = 0.0
+                    ##                                   
+                    print(f"{display_date_key:<15}{cpf.age:<4}"
+                          f"{float(display_oa_bal):<15,.2f}{display_sa_bal:<15,.2f}"
+                          f"={float(display_ma_bal):<14,.2f}+{float(display_ra_bal):<14,.2f}"
+                          f"{float(display_loan_bal):<13,.2f}{float(display_excess_bal):<12,.2f}"
+                          f"{float(display_cpf_payout):<12,.2f}")
+
+                    cpf.record_inflow(account= 'oa',  amount= display_oa_bal,  message= f"transfer_cpf_age={cpf.age}")
+                    cpf.record_inflow(account= 'sa',  amount= display_sa_bal,  message= f"transfer_cpf_age={cpf.age}")
+                    cpf.record_inflow(account= 'loan',amount= display_loan_bal,message= f"transfer_cpf_age={cpf.age}")
+                    cpf.record_inflow(account= 'ra',  amount= display_ra_bal,  message= f"transfer_cpf_age={cpf.age}")
+                    cpf.record_inflow(account= 'excess',amount= display_excess_bal,message= f"transfer_cpf_age={cpf.age}")
+                    is_display_special_july = False   
+                                                           
+            # Pass birth_date as a string
+            display_data_from_db(birth_date.strftime('%Y-%m-%d'))
 
 def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     """
@@ -247,9 +391,7 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     try:
         
         import json
-        from cpf_data_saver_v2 import DataSaver
         from datetime import datetime, date
-        from typing import Any, Union, List
         with open(config_path, 'r') as f:
             # Attempt to load the entire file content as a single JSON object
             try:
@@ -306,21 +448,44 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
         print(f"Error processing log file: {e}")
         return
 
+def display_data_from_db(birth_date_str):
+    """Displays CPF data from the database from today's date to age 87."""
+    conn = create_connection()
+    cur = conn.cursor()
 
+    # Calculate the target year for age 87
+    birth_year = int(birth_date_str.split('-')[0])
+    current_year = datetime.now().year
+    age = current_year - birth_year
+    target_age = 87
+    years_to_simulate = target_age - age
+    target_year = current_year + years_to_simulate
 
+    # Get today's date in the format 'YYYY-MM-DD'
+    today_date = datetime.now().strftime('%Y-%m-%d')
 
-    
-    
-    
-    
-    
-    
-    
-    
+    # Query the database for data from today's date to the target year
+    sql = f"""
+        SELECT date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout
+        FROM cpf_data
+        WHERE date_key >= '{today_date}'
+        AND age <= {min(target_age, 87)}
+        ORDER BY date_key;
+    """
 
-    
-    
-    
+    cur.execute(sql)
+    rows = cur.fetchall()
+
+    print("\nCPF Data from Today to Age 87:")
+    print("-" * 120)
+    print(f"{'Date':<15}{'Age':<5}{'OA':<15}{'SA':<15}{'MA':<15}{'RA':<15}{'Loan':<12}{'Excess':<12}{'Payout':<12}")
+    print("-" * 120)
+
+    for row in rows:
+        date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout = row
+        print(f"{date_key:<15}{age:<5}{oa_balance:<15.2f}{sa_balance:<15.2f}{ma_balance:<15.2f}{ra_balance:<15.2f}{loan_balance:<12.2f}{excess_balance:<12.2f}{cpf_payout:<12.2f}")
+
+    conn.close()
 
 if __name__ == "__main__":
     mydict = {}
