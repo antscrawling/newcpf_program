@@ -8,6 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel  # Import BaseModel
 from typing import Dict, Any
 import json
+import sqlite3
 
 # Load the configuration file
 with open("src/cpf_config.json", "r") as f:
@@ -332,10 +333,8 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                       f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
                       f"{float(cpf_payout):<12,.2f}")
                 
-                # Insert data into the database
-                # Only insert data at the end of the year (December)
-                if cpf.current_date.month == 12:
-                    cpf.insert_data(conn, date_key, cpf.age, oa_bal, sa_bal, ma_bal, ra_bal, loan_bal, excess_bal, cpf_payout)
+                
+                
 
                 if cpf.age == 55 and cpf.current_date.month == 7:
                     is_display_special_july = True
@@ -370,9 +369,11 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     cpf.record_inflow(account= 'ra',  amount= display_ra_bal,  message= f"transfer_cpf_age={cpf.age}")
                     cpf.record_inflow(account= 'excess',amount= display_excess_bal,message= f"transfer_cpf_age={cpf.age}")
                     is_display_special_july = False   
-                                                           
+                # Insert data into the database for every iteration
+            cpf.insert_data(conn, date_key, cpf.age, oa_bal, sa_bal, ma_bal, ra_bal, loan_bal, excess_bal, cpf_payout)
+
             # Pass birth_date as a string
-            display_data_from_db(birth_date.strftime('%Y-%m-%d'))
+           # display_data_from_db()  # Remove the argument
 
 def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     """
@@ -448,42 +449,25 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
         print(f"Error processing log file: {e}")
         return
 
-def display_data_from_db(birth_date_str):
-    """Displays CPF data from the database from today's date to age 87."""
+def display_data_from_db():
+    """Displays CPF data from the database for monthly data between 2025-05 and 2061-12."""
     conn = create_connection()
     cur = conn.cursor()
 
-    # Calculate the target year for age 87
-    birth_year = int(birth_date_str.split('-')[0])
-    current_year = datetime.now().year
-    age = current_year - birth_year
-    target_age = 87
-    years_to_simulate = target_age - age
-    target_year = current_year + years_to_simulate
+    # Define the date range for monthly data
+    start_date = "2025-05-01"
+    end_date = "2061-12-31"
 
-    # Get today's date in the format 'YYYY-MM-DD'
-    today_date = datetime.now().strftime('%Y-%m-%d')
-
-    # Query the database for data from today's date to the target year
+    # Query the database for all monthly data within the specified range
     sql = f"""
         SELECT date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout
         FROM cpf_data
-        WHERE date_key >= '{today_date}'
-        AND age <= {min(target_age, 87)}
-        ORDER BY date_key;
+        WHERE date_key BETWEEN '{start_date}' AND '{end_date}'
+        ORDER BY date_key;  -- Ensure all months are retrieved
     """
 
     cur.execute(sql)
     rows = cur.fetchall()
-
-    print("\nCPF Data from Today to Age 87:")
-    print("-" * 120)
-    print(f"{'Date':<15}{'Age':<5}{'OA':<15}{'SA':<15}{'MA':<15}{'RA':<15}{'Loan':<12}{'Excess':<12}{'Payout':<12}")
-    print("-" * 120)
-
-    for row in rows:
-        date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout = row
-        print(f"{date_key:<15}{age:<5}{oa_balance:<15.2f}{sa_balance:<15.2f}{ma_balance:<15.2f}{ra_balance:<15.2f}{loan_balance:<12.2f}{excess_balance:<12.2f}{cpf_payout:<12.2f}")
 
     conn.close()
 
