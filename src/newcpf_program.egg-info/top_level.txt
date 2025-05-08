@@ -1,17 +1,9 @@
 __init__
-cpf_config_loader_v2
-cpf_config_loader_v3
 cpf_config_loader_v4
 cpf_data_saver_v2
-cpf_date_generator_v3
 cpf_date_generator_v4
-cpf_date_utility_v2
-cpf_program_v8
 cpf_program_v9
-cpf_reconfigure_date_v2
 main
-run_cpf_simulation_v6
 run_cpf_simulation_v7
-screen_copy
 test_test
 testing

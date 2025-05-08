@@ -2,7 +2,7 @@ import json
 from src.cpf_data_saver_v2 import DataSaver
 from datetime import datetime, date
 from typing import Any, Union, List
-with open('cpf_logs20250507.json', 'r') as f:
+with open('cpf_logs.json', 'r') as f:
     logs = [json.loads(line) for line in f]
 
 
@@ -31,7 +31,7 @@ for item in logs:
 #    ds.append(log)
 
 DATE_FORMAT = "%Y-%m-%d"
-config_path = 'cpf_logs20250507.json'
+config_path = 'cpf_logs.json'
 output_path = 'updatedlogs.json'
 
 serializable_data = {}
