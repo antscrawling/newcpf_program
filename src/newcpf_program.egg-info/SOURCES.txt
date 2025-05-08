@@ -5,6 +5,7 @@ src/__init__.py
 src/cpf_config_loader_v4.py
 src/cpf_data_saver_v2.py
 src/cpf_date_generator_v4.py
+src/cpf_gui_input_form.py
 src/cpf_program_v9.py
 src/main.py
 src/run_cpf_simulation_v7.py
