@@ -4,113 +4,110 @@ from tqdm import tqdm  # For the progress bar
 from cpf_date_generator_v4 import DateGenerator
 import os
 import sqlite3
-from datetime import datetime
 from pydantic import BaseModel  # Import BaseModel
-from typing import Dict, Any
 import json
-import sqlite3
 
 # Load the configuration file
-with open("src/cpf_config.json", "r") as f:
+with open("cpf_config.json", "r") as f:
     config_data = json.load(f)
 
-# Define Pydantic models based on the structure of the config data
-class Allocation(BaseModel):
-    allocation: float
-    amount: float
-
-class AgeAllocation(BaseModel):
-    allocation: float
-    amount: float
-
-class OaAllocationAbove55(BaseModel):
-    _56_to_60: AgeAllocation
-    _61_to_65: AgeAllocation
-    _66_to_70: AgeAllocation
-    above_70: AgeAllocation
-
-class MaAllocationAbove55(BaseModel):
-    _56_to_60: AgeAllocation
-    _61_to_65: AgeAllocation
-    _66_to_70: AgeAllocation
-    above_70: AgeAllocation
-
-class RaAllocationAbove55(BaseModel):
-    _56_to_60: AgeAllocation
-    _61_to_65: AgeAllocation
-    _66_to_70: AgeAllocation
-    above_70: AgeAllocation
-
-class AllocationBelow55(BaseModel):
-    oa: Allocation
-    sa: Allocation
-    ma: Allocation
-
-class AllocationAbove55(BaseModel):
-    oa: OaAllocationAbove55
-    sa: Allocation
-    ma: MaAllocationAbove55
-    ra: RaAllocationAbove55
-
-class InterestRates(BaseModel):
-    oa_below_55: float
-    oa_above_55: float
-    sa: float
-    ma: float
-    ra: float
-
-class ExtraInterest(BaseModel):
-    below_55: float
-    first_30k_above_55: float
-    next_30k_above_55: float
-
-class RetirementSumsAmount(BaseModel):
-    amount: float
-    payout: float
-
-class RetirementSums(BaseModel):
-    brs: RetirementSumsAmount
-    frs: RetirementSumsAmount
-    ers: RetirementSumsAmount
-
-class LoanPayments(BaseModel):
-    year_1_2: float
-    year_3: float
-    year_4_beyond: float
-
-class CpfContributionRates(BaseModel):
-    employee: float
-    employer: float
-
-class AgeBasedContributionRates(BaseModel):
-    below_55: CpfContributionRates
-    _55_to_60: CpfContributionRates
-    _60_to_65: CpfContributionRates
-    _65_to_70: CpfContributionRates
-    above_70: CpfContributionRates
-
-class ConfigModel(BaseModel):
-    allocation_below_55: AllocationBelow55
-    allocation_above_55: AllocationAbove55
-    cpf_payout_age: int
-    age_of_brs: int
-    start_date: str
-    end_date: str
-    birth_date: str
-    salary: int
-    loan_amount: int
-    interest_rates: InterestRates
-    extra_interest: ExtraInterest
-    retirement_sums: RetirementSums
-    oa_balance: float
-    sa_balance: float
-    ma_balance: float
-    ra_balance: float
-    excess_balance: float
-    loan_balance: float
-    loan_payments: LoanPayments
-    salary_cap: int
-    cpf_contribution_rates: AgeBasedContributionRates
+## Define Pydantic models based on the structure of the config data
+#class Allocation(BaseModel):
+#    allocation: float
+#    amount: float
+#
+#class AgeAllocation(BaseModel):
+#    allocation: float
+#    amount: float
+#
+#class OaAllocationAbove55(BaseModel):
+#    _56_to_60: AgeAllocation
+#    _61_to_65: AgeAllocation
+#    _66_to_70: AgeAllocation
+#    above_70: AgeAllocation
+#
+#class MaAllocationAbove55(BaseModel):
+#    _56_to_60: AgeAllocation
+#    _61_to_65: AgeAllocation
+#    _66_to_70: AgeAllocation
+#    above_70: AgeAllocation
+#
+#class RaAllocationAbove55(BaseModel):
+#    _56_to_60: AgeAllocation
+#    _61_to_65: AgeAllocation
+#    _66_to_70: AgeAllocation
+#    above_70: AgeAllocation
+#
+#class AllocationBelow55(BaseModel):
+#    oa: Allocation
+#    sa: Allocation
+#    ma: Allocation
+#
+#class AllocationAbove55(BaseModel):
+#    oa: OaAllocationAbove55
+#    sa: Allocation
+#    ma: MaAllocationAbove55
+#    ra: RaAllocationAbove55
+#
+#class InterestRates(BaseModel):
+#    oa_below_55: float
+#    oa_above_55: float
+#    sa: float
+#    ma: float
+#    ra: float
+#
+#class ExtraInterest(BaseModel):
+#    below_55: float
+#    first_30k_above_55: float
+#    next_30k_above_55: float
+#
+#class RetirementSumsAmount(BaseModel):
+#    amount: float
+#    payout: float
+#
+#class RetirementSums(BaseModel):
+#    brs: RetirementSumsAmount
+#    frs: RetirementSumsAmount
+#    ers: RetirementSumsAmount
+#
+#class LoanPayments(BaseModel):
+#    year_1_2: float
+#    year_3: float
+#    year_4_beyond: float
+#
+#class CpfContributionRates(BaseModel):
+#    employee: float
+#    employer: float
+#
+#class AgeBasedContributionRates(BaseModel):
+#    below_55: CpfContributionRates
+#    _55_to_60: CpfContributionRates
+#    _60_to_65: CpfContributionRates
+#    _65_to_70: CpfContributionRates
+#    above_70: CpfContributionRates
+#
+#class ConfigModel(BaseModel):
+#    allocation_below_55: AllocationBelow55
+#    allocation_above_55: AllocationAbove55
+#    cpf_payout_age: int
+#    age_of_brs: int
+#    start_date: str
+#    end_date: str
+#    birth_date: str
+#    salary: int
+#    loan_amount: int
+#    interest_rates: InterestRates
+#    extra_interest: ExtraInterest
+#    retirement_sums: RetirementSums
+#    oa_balance: float
+#    sa_balance: float
+#    ma_balance: float
+#    ra_balance: float
+#    excess_balance: float
+#    loan_balance: float
+#    loan_payments: LoanPayments
+#    salary_cap: int
+#    cpf_contribution_rates: AgeBasedContributionRates
 
 # Database setup
 DATABASE_NAME = 'cpf_simulation.db'
@@ -150,8 +147,42 @@ def loan_computation_first_three_years(cpf):
     # Corrected implementation for loan_payments
     loan_payments = cpf.config.getdata('loan_payments', {})
     payment_key = 'year_1_2' if cpf.age < 24 else 'year_3'
-    loan_payment_amount = float(loan_payments.getdata(payment_key, 0.0)) if payment_key in loan_payments else 0.0
+    float(loan_payments.getdata(payment_key, 0.0)) if payment_key in loan_payments else 0.0
 
+def import_log_file_and_save_to_sqlite(log_filepath: str, conn):
+    """
+    Import a log file and save its contents to the SQLite database.
+
+    :param log_filepath: Path to the log file.
+    :param conn: SQLite connection object.
+    """
+    with open(log_filepath, 'r') as f:
+        for line in f:
+            try:
+                log_entry = json.loads(line)
+                # Extract values from the log entry
+                date_key = log_entry['date_key'].strftime("%Y-%m-%d")  # Convert to string format
+                age = log_entry['age']
+                oa_balance = log_entry['oa_balance']
+                sa_balance = log_entry['sa_balance']
+                ma_balance = log_entry['ma_balance']
+                ra_balance = log_entry['ra_balance']
+                loan_balance = log_entry['loan_balance']
+                excess_balance = log_entry['excess_balance']
+                cpf_payout = log_entry['cpf_payout']
+
+                # Insert into the database
+                sql = """
+                INSERT OR REPLACE INTO cpf_data (date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """
+                cur = conn.cursor()
+                cur.execute(sql, (date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout))
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
+            except sqlite3.Error as e:
+                print(f"SQLite error: {e}")
+                
 def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     # Step 1: Load the configuration
     oa_bal = 0.0
@@ -212,7 +243,6 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
        
        
        #  calculate the allocations outside the loop                                                                                 
-        accounts = ['oa', 'sa', 'ma', 'ra']
         year = 1
         # CPF allocation logic
         with create_connection() as conn:
@@ -342,8 +372,6 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     orig_sa_bal = sa_bal
                     orig_ma_bal = ma_bal
                     orig_loan_bal = loan_bal
-                    orig_ra_bal = ra_bal
-                    orig_excess_bal = excess_bal
                 
                                           
                 if is_display_special_july:    
@@ -382,7 +410,6 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
     :param log_filepath: Path to the log file.
     :param output_json_filepath: Path to save the JSON file.
     """
-    DATE_FORMAT = "%Y-%m-%d"
     config_path = log_filepath
     output_path =  output_json_filepath
     if not os.path.exists(log_filepath):
@@ -435,14 +462,21 @@ def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
         #for log in logs:
         #    ds.append(log)
 
-        DATE_FORMAT = "%Y-%m-%d"
         config_path = log_filepath
         output_path =  output_json_filepath
 
-        serializable_data = {}
         with open(output_path, 'w') as f:
             json.dump(logs, f, default=str, indent=4)
-
+        with open(output_path, 'r') as f:
+            # Attempt to load the entire file content as a single JSON object
+            try:
+                logs = json.load(f)
+                if not isinstance(logs, list):
+                    logs = [logs]  # Ensure it's a list for consistent processing
+            except json.JSONDecodeError:
+                # If the file contains multiple JSON objects, load it line by line
+                f.seek(0)
+        #import_log_file_and_save_to_sqlite(logs, create_connection())
 
 
     except Exception as e:
@@ -467,7 +501,7 @@ def display_data_from_db():
     """
 
     cur.execute(sql)
-    rows = cur.fetchall()
+    cur.fetchall()
 
     conn.close()
 
@@ -557,3 +591,5 @@ if __name__ == "__main__":
         with open(log_filepath, 'w') as f:
             f.write('')  # Create an empty file
     load_and_resave_log_as_json(log_filepath, output_json_filepath)
+   # import_log_file_and_save_to_sqlite('cpf_logs.json', create_connection())
+    display_data_from_db()
