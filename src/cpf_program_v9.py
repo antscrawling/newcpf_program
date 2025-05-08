@@ -7,6 +7,7 @@ from cpf_config_loader_v4 import ConfigLoader
 from cpf_data_saver_v2 import DataSaver  # Import DataSaver class
 
 from multiprocessing import Process, Queue
+import sqlite3
 
 # Load configuration
 config = ConfigLoader('cpf_config.json')

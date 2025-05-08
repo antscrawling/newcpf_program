@@ -227,17 +227,17 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                 # loan payments
                 
                 if year == 1 and cpf._loan_balance > 0:
-                    cpf.record_inflow(account='oa', amount=loan_paymenty1, message="Loan payment for OA at year 1")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment for OA at year 1")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty1, message="Loan payment from OA Account at year 1")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment from OA Account at year 1")
                 elif year == 2 and cpf._loan_balance > 0:
-                    cpf.record_inflow(account='oa', amount=loan_paymenty1, message="Loan payment for OA at year 2")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment for OA at year 1")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty1, message="Loan payment from OA Account at year 2")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment from OA Account at year 2")
                 elif year == 3 and cpf._loan_balance > 0:
-                    cpf.record_inflow(account='oa', amount=loan_paymenty3, message="Loan payment for OA at year 3")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty3, message="Loan payment for OA at year 1")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty3, message="Loan payment from OA Account at year 3")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty3, message="Loan payment from OA Account at year 3")
                 elif year >= 4 and cpf._loan_balance > 0:
-                    cpf.record_inflow(account='oa', amount=loan_paymenty4, message="Loan payment for OA at year 4")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty4, message="Loan payment for OA at year 1")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty4, message=f"Loan payment from OA Account at year 4, age {cpf.age}")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty4, message=f"Loan payment from OA Account at year 4, age {cpf.age}")
                 year += 1
                 # Increment the year counter           
                 if cpf.age < 55:    
@@ -262,12 +262,12 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
 
                     # Get the allocation amounts from the config
                     for account in ['oa', 'ma', 'ra']:
-                        if cpf.current_date.month == 7 and cpf.age == 55 and account  == 'ra':
-                            account = 'sa'
-                        elif cpf.current_date.month == 8 and cpf.age == 55 and account  == 'sa':
-                            account = 'ra'
-                        else: 
-                            account = account
+                        #if cpf.current_date.month == 7 and cpf.age == 55 and account  == 'ra':
+                        #    account = 'sa'
+                        #elif cpf.current_date.month == 8 and cpf.age == 55 and account  == 'sa':
+                        #    account = 'ra'
+                        #else: 
+                        #    account = account
                         allocation_amount = cpf.config.getdata(['allocation_above_55',account,age_key,'amount'],0 ) # dicct.get('allocation_above_55',{}).get(account,{}).get(age_key,{}).get('amount', 0.0))
                         cpf.record_inflow(account=account, amount=allocation_amount, message=f"Allocation for {account} at age {cpf.age}")
                                                          
@@ -370,7 +370,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     cpf.record_inflow(account= 'excess',amount= display_excess_bal,message= f"transfer_cpf_age={cpf.age}")
                     is_display_special_july = False   
                 # Insert data into the database for every iteration
-            cpf.insert_data(conn, date_key, cpf.age, oa_bal, sa_bal, ma_bal, ra_bal, loan_bal, excess_bal, cpf_payout)
+                cpf.insert_data(conn, date_key, cpf.age, oa_bal, sa_bal, ma_bal, ra_bal, loan_bal, excess_bal, cpf_payout)
 
             # Pass birth_date as a string
            # display_data_from_db()  # Remove the argument
