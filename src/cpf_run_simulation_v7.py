@@ -6,6 +6,7 @@ import os
 import sqlite3
 from pydantic import BaseModel  # Import BaseModel
 import json
+from src.cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
 
 # Load the configuration file
 with open("cpf_config.json", "r") as f:
@@ -304,86 +305,89 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
 
             # Pass birth_date as a string
            # display_data_from_db()  # Remove the argument
+    #this transforms the logs from json to csv.
+    
+    cleanup()
 
-def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
-    """
-    Load a log file and resave it as a JSON file.
-
-    :param log_filepath: Path to the log file.
-    :param output_json_filepath: Path to save the JSON file.
-    """
-    config_path = log_filepath
-    output_path =  output_json_filepath
-    if not os.path.exists(log_filepath):
-        print(f"Log file '{log_filepath}' does not exist.")
-        return
-
-    try:
-        
-        import json
-        from datetime import datetime, date
-        with open(config_path, 'r') as f:
-            # Attempt to load the entire file content as a single JSON object
-            try:
-                logs = json.load(f)
-                if not isinstance(logs, list):
-                    logs = [logs]  # Ensure it's a list for consistent processing
-            except json.JSONDecodeError:
-                # If the file contains multiple JSON objects, load it line by line
-                f.seek(0)  # Reset file pointer to the beginning
-                logs = []
-                for line in f:
-                    try:
-                        logs.append(json.loads(line))
-                    except json.JSONDecodeError as e:
-                        print(f"Skipping invalid JSON line: {line.strip()} - {e}")
-                        continue
-
-
-        #convert list to dictionary
-        for item in logs:
-            if isinstance(item, dict):
-                for key, value in item.items():
-                    if isinstance(value, (datetime, date)):
-                        item[key] = value.strftime("%Y-%m-%d")
-                    elif isinstance(value, list):
-                        item[key] = [v.strftime("%Y-%m-%d") if isinstance(v, (datetime, date)) else v for v in value]
-                    elif isinstance(value, str|int|float):
-                       # item[key] = value
-                        #try:
-                        #    item[key] = datetime.strptime(value, "%Y-%m-%d").date()
-                        #except ValueError:
-                        #    pass  # not a date-formatted string
-                        item[key] = value
-        #logs = {log['account']: log for log in logs}    
-
-
-
-        ##save using datasaver
-        #ds = DataSaver(format='json')
-        #for log in logs:
-        #    ds.append(log)
-
-        config_path = log_filepath
-        output_path =  output_json_filepath
-
-        with open(output_path, 'w') as f:
-            json.dump(logs, f, default=str, indent=4)
-        with open(output_path, 'r') as f:
-            # Attempt to load the entire file content as a single JSON object
-            try:
-                logs = json.load(f)
-                if not isinstance(logs, list):
-                    logs = [logs]  # Ensure it's a list for consistent processing
-            except json.JSONDecodeError:
-                # If the file contains multiple JSON objects, load it line by line
-                f.seek(0)
-        #import_log_file_and_save_to_sqlite(logs, create_connection())
-
-
-    except Exception as e:
-        print(f"Error processing log file: {e}")
-        return
+#def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
+#    """
+#    Load a log file and resave it as a JSON file.
+#
+#    :param log_filepath: Path to the log file.
+#    :param output_json_filepath: Path to save the JSON file.
+#    """
+#    config_path = log_filepath
+#    output_path =  output_json_filepath
+#    if not os.path.exists(log_filepath):
+#        print(f"Log file '{log_filepath}' does not exist.")
+#        return
+#
+#    try:
+#        
+#        import json
+#        from datetime import datetime, date
+#        with open(config_path, 'r') as f:
+#            # Attempt to load the entire file content as a single JSON object
+#            try:
+#                logs = json.load(f)
+#                if not isinstance(logs, list):
+#                    logs = [logs]  # Ensure it's a list for consistent processing
+#            except json.JSONDecodeError:
+#                # If the file contains multiple JSON objects, load it line by line
+#                f.seek(0)  # Reset file pointer to the beginning
+#                logs = []
+#                for line in f:
+#                    try:
+#                        logs.append(json.loads(line))
+#                    except json.JSONDecodeError as e:
+#                        print(f"Skipping invalid JSON line: {line.strip()} - {e}")
+#                        continue
+#
+#
+#        #convert list to dictionary
+#        for item in logs:
+#            if isinstance(item, dict):
+#                for key, value in item.items():
+#                    if isinstance(value, (datetime, date)):
+#                        item[key] = value.strftime("%Y-%m-%d")
+#                    elif isinstance(value, list):
+#                        item[key] = [v.strftime("%Y-%m-%d") if isinstance(v, (datetime, date)) else v for v in value]
+#                    elif isinstance(value, str|int|float):
+#                       # item[key] = value
+#                        #try:
+#                        #    item[key] = datetime.strptime(value, "%Y-%m-%d").date()
+#                        #except ValueError:
+#                        #    pass  # not a date-formatted string
+#                        item[key] = value
+#        #logs = {log['account']: log for log in logs}    
+#
+#
+#
+#        ##save using datasaver
+#        #ds = DataSaver(format='json')
+#        #for log in logs:
+#        #    ds.append(log)
+#
+#        config_path = log_filepath
+#        output_path =  output_json_filepath
+#
+#        with open(output_path, 'w') as f:
+#            json.dump(logs, f, default=str, indent=4)
+#        with open(output_path, 'r') as f:
+#            # Attempt to load the entire file content as a single JSON object
+#            try:
+#                logs = json.load(f)
+#                if not isinstance(logs, list):
+#                    logs = [logs]  # Ensure it's a list for consistent processing
+#            except json.JSONDecodeError:
+#                # If the file contains multiple JSON objects, load it line by line
+#                f.seek(0)
+#        #import_log_file_and_save_to_sqlite(logs, create_connection())
+#
+#
+#    except Exception as e:
+#        print(f"Error processing log file: {e}")
+#        return
 
 def display_data_from_db():
     """Displays CPF data from the database for monthly data between 2025-05 and 2061-12."""
@@ -487,11 +491,11 @@ if __name__ == "__main__":
     }
     main(dicct = mydict)
     log_filepath = "cpf_logs.json"  # Replace with the actual log file pathfile path
-    output_json_filepath = "cpf_logs_updated.json"  # Replace with the desired JSON file pathfile path
-    # Create the file if it doesn't exist before calling the function
-    if not os.path.exists(log_filepath):
-        with open(log_filepath, 'w') as f:
-            f.write('')  # Create an empty file
-    load_and_resave_log_as_json(log_filepath, output_json_filepath)
-   # import_log_file_and_save_to_sqlite('cpf_logs.json', create_connection())
+   #utput_json_filepath = "cpf_logs_updated.json"  # Replace with the desired JSON file pathfile path
+   # Create the file if it doesn't exist before calling the function
+   #f not os.path.exists(log_filepath):
+   #   with open(log_filepath, 'w') as f:
+   #       f.write('')  # Create an empty file
+   #oad_and_resave_log_as_json(log_filepath, output_json_filepath)
+   #import_log_file_and_save_to_sqlite('cpf_logs.json', create_connection())
     display_data_from_db()
