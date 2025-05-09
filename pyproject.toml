@@ -11,3 +11,13 @@ dependencies = [
     "ruff>=0.11.8",
     "tqdm>=4.67.1",
 ]
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = false
+enableWebsocketCompression = false
+
+[browser]
+gatherUsageStats = false

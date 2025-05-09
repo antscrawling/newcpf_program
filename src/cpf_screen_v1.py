@@ -3,35 +3,10 @@ import json
 import subprocess
 import os
 
-import streamlit as st
+CONFIG_PATH = "cpf_config.json"
 
 st.set_page_config(page_title="CPF Simulation Setup", layout="wide")
 st.title("🧾 CPF Simulation Configurator")
-
-
-USER = st.secrets["credentials"]["username"]
-PASS = st.secrets["credentials"]["password"]
-
-if "authenticated" not in st.session_state:
-    with st.sidebar:
-        st.title("🔐 Login")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        login = st.button("Login")
-
-    if login:
-        if username == USER and password == PASS:
-            st.session_state["authenticated"] = True
-        else:
-            st.error("Invalid login")
-
-if not st.session_state.get("authenticated"):
-    st.stop()
-    
-CONFIG_PATH = "cpf_config.json"
-
-#st.set_page_config(page_title="CPF Simulation Setup", layout="wide")
-#st.title("🧾 CPF Simulation Configurator")
 
 # Load config
 if os.path.exists(CONFIG_PATH):
