@@ -67,7 +67,7 @@ with col2:
     if st.button("🚀 Submit"):
         # Run the simulation script
         try:
-            result = subprocess.run(["python", "run_cpf_simulation_v7.py"], check=True, capture_output=True, text=True)
+            result = subprocess.run(["python", "cpf_run_simulation_v7.py"], check=True, capture_output=True, text=True)
             st.success("Simulation completed!")
             st.code(result.stdout)
         except subprocess.CalledProcessError as e:

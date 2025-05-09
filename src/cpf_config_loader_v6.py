@@ -2,6 +2,8 @@ import json
 from datetime import datetime, date
 import os
 from typing import Any  # Import Any for type hinting
+import re
+from dateutil.relativedelta import relativedelta
 
 DATE_FORMAT = "%Y-%m-%d"
 
@@ -18,20 +20,49 @@ class ConfigLoader:
         self._load_config()
 
     def _load_config(self):
+        """
+        Load the configuration file and parse its contents.
+        """
         if not os.path.exists(self.config_path):
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        with open(self.config_path, 'r') as f:
-            config_data = json.load(f)
+
+        try:
+            with open(self.config_path, 'r') as myfile:
+                # Read the entire file as JSON
+                config_data = json.load(myfile)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Error decoding JSON: {e}")
+
+        # Ensure the data is a dictionary
+        if isinstance(config_data, list):
+            # Convert list to a dictionary with indices as keys
+            config_data = {str(index): item for index, item in enumerate(config_data)}
+        elif not isinstance(config_data, dict):
+            raise ValueError(f"Invalid configuration format: Expected a dictionary, got {type(config_data)}")
+
         # Convert date strings to date objects
-        for key, value in list(config_data.items()):
+        for key, value in config_data.items():
             if isinstance(value, str):
                 try:
                     config_data[key] = datetime.strptime(value, DATE_FORMAT).date()
                 except ValueError:
-                    pass  # not a date-formatted string
+                    pass  # Not a date-formatted string
+
         self.data = config_data
 
-    def getdata(self, keys, default=None)-> Any:
+    def save(self, output_path=None):
+        """Save current config data back to JSON (converting datetime to string)."""
+        serializable_data = {}
+        for key, value in self.data.items():
+            if isinstance(value, (datetime, date)):
+                serializable_data[key] = value.strftime(DATE_FORMAT)
+            else:
+                serializable_data[key] = value
+        out_path = output_path or self.config_path
+        with open(out_path, 'w') as f:
+            json.dump(serializable_data, f, indent=4)
+
+    def getdata(self, keys, default=None) -> Any:
         """
         Retrieve a value from the configuration using a single key or a list of keys.
         :param keys: A single key (str) or a list of keys (list of str).
@@ -48,52 +79,6 @@ class ConfigLoader:
             else:
                 return default
         return current_value
-
-    def add_key_value(self, keys: Any, values: Any):
-        """
-        Add a new key-value pair to the configuration and save it to the JSON file.
-        :param key(s): The key to add or update in the configuration.
-        :param value(s): The value to associate with the key.
-        """
-        
-        if isinstance(keys, str) and isinstance(values, str):
-            keys = [keys]
-            values = [values]
-            self.data[keys] = values
-            
-        elif isinstance(keys, list) and isinstance(values, list):
-            if len(keys) != len(values):
-                raise ValueError("Keys and values must be of the same length.")
-            for key, value in zip(keys, values):
-                # Traverse the dictionary to find the correct location
-                self.data[key] = value
-        elif isinstance(keys, dict) and isinstance(values, dict|None):
-            for key, value in keys.items():
-                if isinstance(value, dict):
-                    # Traverse the dictionary to find the correct location
-                    current_dict = self.data
-                    for k in key.split('.'):
-                        if k not in current_dict:
-                            current_dict[k] = {}
-                        current_dict = current_dict[k]
-                    current_dict.update(value)
-                else:
-                    self.data[key] = value
-        # Save the updated configuration back to the JSON file
-        self.save()
-       # print(" | ".join(f"Added key '{k}' with value '{v}' to the configuration." for k, v in current_dict.items()))
-
-    def save(self, output_path=None):
-        """Save current config data back to JSON (converting datetime to string)."""
-        serializable_data = {}
-        for key, value in self.data.items():
-            if isinstance(value, (datetime, date)):
-                serializable_data[key] = value.strftime(DATE_FORMAT)
-            else:
-                serializable_data[key] = value
-        out_path = output_path or self.config_path
-        with open(out_path, 'w') as f:
-            json.dump(serializable_data, f, indent=4)
 
     def get_keys_and_values(self):
         """
@@ -124,21 +109,21 @@ class ConfigLoader:
         extract(self.data)
         return keys, values
 
+
 # Example usage
 if __name__ == "__main__":
     try:
-        # Create a dummy config for testing if it doesn't exist
-        dummy = {
-            'some_list_there' : [1, 2, 3]
-        }
-                                                                                        
-        config_loader = ConfigLoader('cpf_logs_updated')  # Updated file nameed
-        
+        # Load the configuration
+        config_loader = ConfigLoader('cpf_logs_updated.json')
+        print(config_loader.data)
     except FileNotFoundError:
         # Create a dummy config for testing if it doesn't exist
-        dummy = {
-            'some_list_there' : [1, 2, 3]
-        }
-        with open('cpf_logs_updated', 'w') as f:
+        dummy = [
+            {"key1": "value1"},
+            {"key2": "value2"},
+            {"key3": "value3"}
+        ]
+        with open('cpf_logs_updated.json', 'w') as f:
             json.dump(dummy, f, indent=4)
-        config_loader = ConfigLoader('cpf_logs_updated')
+        config_loader = ConfigLoader('cpf_logs_updated.json')
+        print(config_loader.data)

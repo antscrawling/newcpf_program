@@ -2,45 +2,60 @@ import json
 from src.cpf_data_saver_v2 import DataSaver
 from datetime import datetime, date
 from typing import Any, Union, List
-with open('cpf_logs.json', 'r') as f:
-    logs = [json.loads(line) for line in f]
+
+def custom_serializer(obj):
+    """Custom serializer for non-serializable objects like datetime."""
+    if isinstance(obj, datetime):
+        return obj.strftime("%Y-%m-%d %H:%M:%S")
+    # It's better to raise TypeError for unhandled types
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+def open_json_file(file_path: str) -> List[dict]:
+    """
+    Open a JSON file and return its content as a list of dictionaries.
+    Each line in the file is expected to be a JSON object.
+    """
+    with open(file_path, 'r') as f:
+        return [json.loads(line) for line in f]
 
 
-#convert list to dictionary
-for item in logs:
-    if isinstance(item, dict):
-        for key, value in item.items():
-            if isinstance(value, (datetime, date)):
-                item[key] = value.strftime("%Y-%m-%d")
-            elif isinstance(value, list):
-                item[key] = [v.strftime("%Y-%m-%d") if isinstance(v, (datetime, date)) else v for v in value]
-            elif isinstance(value, str|int|float):
-               # item[key] = value
-                #try:
-                #    item[key] = datetime.strptime(value, "%Y-%m-%d").date()
-                #except ValueError:
-                #    pass  # not a date-formatted string
-                item[key] = value
-#logs = {log['account']: log for log in logs}    
+
+
+# the log file format is not really json.
+#so parse each line instead of using json.load
+def parse_log_file(file_path: str) -> List[dict]:
+    """
+    Parse a log file and return a list of dictionaries.
+    Each line in the log file is expected to be a JSON object.
+    """
+    logs = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            try:
+                log_entry = json.loads(line)
+                logs.append(log_entry)
+            except json.JSONDecodeError:
+                continue  # Skip invalid JSON lines
+    return logs
+
+def convert_to_dict(logs: List[Union[str, dict]]) -> List[dict]:
+    """
+    Convert a list of strings or dictionaries to a list of dictionaries.
+    """
+    result = []
+    for item in logs:
+        if isinstance(item, str):
+            try:
+                item = json.loads(item)
+            except json.JSONDecodeError:
+                continue  # Skip invalid JSON strings
+        if isinstance(item, dict):
+            result.append(item)
+    return result
 
 
     
-##save using datasaver
-#ds = DataSaver(format='json')
-#for log in logs:
-#    ds.append(log)
-
-DATE_FORMAT = "%Y-%m-%d"
-config_path = 'cpf_logs.json'
-output_path = 'updatedlogs.json'
-
-serializable_data = {}
-with open(output_path, 'w') as f:
-    json.dump(logs, f, default=str, indent=4)
-
-
-
-
+            
 
 
 
