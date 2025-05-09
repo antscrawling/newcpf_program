@@ -36,4 +36,4 @@ EXPOSE 8501
 
 # Run the Streamlit app (replace with your main file if renamed)
 #CMD ["streamlit", "run", "main.py", "--server.port=8501", "--server.enableCORS=false", "--browser.gatherUsageStats=false"]
-CMD ["streamlit", "run", "main.py", "--server.port=8501", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+CMD ["streamlit", "run", "main_v3.py", "--server.port=8501", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
