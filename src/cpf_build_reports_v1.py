@@ -75,23 +75,23 @@ class CPFLogEntry:
        # else:
        #     return base_age - 1
 
-    def record_inflow(self, account: str, amount: float, message: str = "") -> None:
-        """
-        Records an inflow of funds into a specified account.
-        """
-        current_balance = getattr(self, f"{account}_balance", 0.0)
-        new_balance = current_balance + amount
-        setattr(self, f"{account}_balance", new_balance.__round__(2))
-        self.inflow += amount
-
-    def record_outflow(self, account: str, amount: float, message: str = "") -> None:
-        """
-        Records an outflow of funds from a specified account.
-        """
-        current_balance = getattr(self, f"{account}_balance", 0.0)
-        new_balance = current_balance - amount
-        setattr(self, f"{account}_balance", new_balance.__round__(2))
-        self.outflow += amount
+    #def record_inflow(self, account: str, amount: float, message: str = "") -> None:
+    #    """
+    #    Records an inflow of funds into a specified account.
+    #    """
+    #    current_balance = getattr(self, f"{account}_balance", 0.0)
+    #    new_balance = current_balance + amount
+    #    setattr(self, f"{account}_balance", new_balance.__round__(2))
+    #    self.inflow += amount
+#
+    #def record_outflow(self, account: str, amount: float, message: str = "") -> None:
+    #    """
+    #    Records an outflow of funds from a specified account.
+    #    """
+    #    current_balance = getattr(self, f"{account}_balance", 0.0)
+    #    new_balance = current_balance - amount
+    #    setattr(self, f"{account}_balance", new_balance.__round__(2))
+    #    self.outflow += amount
 
     def build_report(self, output_format="csv"):
         """
@@ -107,47 +107,61 @@ class CPFLogEntry:
         for _, log in self.logs.iterrows():
             # Extract log details
             date_str = log["date"]
-            try:
-                # Parse the date into YYYY-MM format
-                if len(date_str) == 7:  # Format: YYYY-MM
-                    self.xdate = datetime.strptime(date_str, "%Y-%m").date()
-                elif len(date_str) == 10:  # Format: YYYY-MM-DD
-                    self.xdate = datetime.strptime(date_str, "%Y-%m-%d").date()
-                else:
-                    raise ValueError(f"Invalid date format: {date_str}")
-            except ValueError as e:
-                raise ValueError(f"Error parsing date '{date_str}': {e}")
+            self.xdate = datetime.strptime(date_str, "%Y-%m-%d").date()
+            #try:
+            #    # Parse the date into YYYY-MM format
+            #    if len(date_str) == 7:  # Format: YYYY-MM
+            #        self.xdate = datetime.strptime(date_str, "%Y-%m").date()
+            #    elif len(date_str) == 10:  # Format: YYYY-MM-DD
+            #        self.xdate = datetime.strptime(date_str, "%Y-%m-%d").date()
+            #    else:
+            #        raise ValueError(f"Invalid date format: {date_str}")
+            #except ValueError as e:
+            #    raise ValueError(f"Error parsing date '{date_str}': {e}")
 
             # Update the age for the current log entry
-            self.age = self.calculate_age()
+            self.age =  log["age"]
 
             self.flow_type = log["type"]
             self.message = log["message"]
 
             account = log["account"]
             amount = log["amount"]
-
-            if self.flow_type == "inflow":
-                self.record_inflow(account, amount, self.message)
-            elif self.flow_type == "outflow":
-                self.record_outflow(account, amount, self.message)
+            match account:
+                case "oa":
+                    self.oa_balance += amount
+                case "sa":
+                    self.sa_balance += amount
+                case "ma":
+                    self.ma_balance += amount
+                case "ra":
+                    self.ra_balance += amount
+                case "loan":
+                    self.loan_balance += amount
+                case "excess":
+                    self.excess_balance += amount
+           #if self.flow_type == "inflow":
+           #    self.record_inflow(account, amount, self.message)
+           #elif self.flow_type == "outflow":
+           #    self.record_outflow(account, amount, self.message)
 
             # Extract year-month for the DATE_KEY
-            date_key = self.xdate.strftime("%Y-%m")
+           
 
             # Append the row to the report data, rounding amounts to 2 decimal places
             report_data.append({
-                "DATE_KEY": date_key,
+                "DATE_KEY": self.xdate ,
                 "AGE": self.age,
-                "INFLOW": round(self.inflow, 2),
-                "OUTFLOW": round(self.outflow, 2),
-                "OA": round(self.oa_balance, 2),
-                "SA": round(self.sa_balance, 2),
-                "MA": round(self.ma_balance, 2),
-                "RA": round(self.ra_balance, 2),
-                "LOANS": round(self.loan_balance, 2),
-                "EXCESS": round(self.excess_balance, 2),
+                "ACCOUNT_MOVEMENT": account,
                 "TYPE": self.flow_type,
+                "INFLOW": amount if self.flow_type == "inflow" else 0,
+                "OUTFLOW": amount if self.flow_type == "outflow" else 0,
+                "OA": getattr(self,f'{account}_balance') ,  
+                "SA": getattr(self,f'{account}_balance') ,  
+                "MA": getattr(self,f'{account}_balance') ,  
+                "RA": getattr(self,f'{account}_balance') ,  
+                "LOANS":  getattr(self,f'{account}_balance') ,  
+                "EXCESS": getattr(self,f'{account}_balance') ,
                 "MESSAGE": self.message
             })
 

@@ -4,7 +4,7 @@ from tqdm import tqdm  # For the progress bar
 from cpf_date_generator_v4 import DateGenerator
 import os
 import sqlite3
-from pydantic import BaseModel  # Import BaseModel
+#from pydantic import BaseModel  # Import BaseModel
 import json
 #from cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
 
@@ -122,6 +122,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
            
                 cpf.date_key = date_key
                 cpf.age = date_info['age']
+                setattr(cpf,'age',cpf.age)
                 cpf.current_date = date_info['period_end']
                 
                 # loan payments
