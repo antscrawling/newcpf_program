@@ -152,7 +152,7 @@ class CPFLogEntry:
             report_data.append({
                 "DATE_KEY": self.xdate ,
                 "AGE": self.age,
-                "ACCOUNT_MOVEMENT": account,
+                "ACCOUNT": account,
                 "TYPE": self.flow_type,
                 "INFLOW": amount if self.flow_type == "inflow" else 0,
                 "OUTFLOW": amount if self.flow_type == "outflow" else 0,

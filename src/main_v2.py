@@ -41,7 +41,7 @@ for key, value in zip(keys, values):
     updated_config[key] = updated_value
 
 # Buttons for additional functionality
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6  = st.columns(5)
 
 with col1:
     if st.button("💾 Save"):

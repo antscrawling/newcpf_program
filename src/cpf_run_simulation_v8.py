@@ -9,6 +9,7 @@ import json
 #from cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
+import jmespath
 
 # Load the configuration file
 with open("cpf_config.json", "r") as f:
@@ -419,13 +420,15 @@ if __name__ == "__main__":
         }
     }
     }
-    main(dicct = mydict)
-  #  log_filepath = "cpf_logs.json"  # Replace with the actual log file pathfile path
-   #utput_json_filepath = "cpf_logs_updated.json"  # Replace with the desired JSON file pathfile path
-   # Create the file if it doesn't exist before calling the function
-   #f not os.path.exists(log_filepath):
-   #   with open(log_filepath, 'w') as f:
-   #       f.write('')  # Create an empty file
-   #oad_and_resave_log_as_json(log_filepath, output_json_filepath)
-   #import_log_file_and_save_to_sqlite('cpf_logs.json', create_connection())
-    display_data_from_db()
+    
+
+
+  
+    main(dicct=mydict)
+  
+  
+  
+  
+  
+  
+  

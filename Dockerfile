@@ -3,9 +3,9 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies in one layer
 RUN apt-get update && \
     apt-get install -y libglib2.0-0 libsm6 libxext6 libxrender-dev && \
+    apt-get install -y python3-tk && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for caching
@@ -13,6 +13,7 @@ COPY requirements.txt ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install python-dateutil
 
 # Copy the app code
 COPY src/ /app/
@@ -26,4 +27,4 @@ COPY secrets.toml /root/.streamlit/secrets.toml
 EXPOSE 8501
 
 # Run the Streamlit app
-CMD ["streamlit", "run", "main_v3.py", "--server.port=8501", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+CMD ["streamlit", "run", "main_v4.py", "--server.port=8501", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]

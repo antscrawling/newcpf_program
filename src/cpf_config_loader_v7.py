@@ -3,9 +3,6 @@ from datetime import datetime, date
 import os
 from typing import Any  # Import Any for type hinting
 import re
-from dateutil.relativedelta import relativedelta
-from pprint import pprint
-
 DATE_FORMAT = "%Y-%m-%d"
 
 
@@ -110,7 +107,7 @@ class ConfigLoader:
         extract(self.data)
         return keys, values
     
-    def flatten_dict(d, parent_key="", sep="."):
+    def flatten_dict(self,d, parent_key="", sep="."):
         """
         Flattens a nested dictionary into a single-level dictionary with keys joined by `sep`.
         """
@@ -123,7 +120,7 @@ class ConfigLoader:
                 items.append((new_key, v))
         return dict(items)
 
-    def unflatten_dict(d, sep="."):
+    def unflatten_dict(self,d, sep="."):
         """
         Converts a flattened dictionary with keys like 'a.b.c' back into a nested dictionary.
         """
@@ -143,6 +140,72 @@ class ConfigLoader:
         # It's better to raise TypeError for unhandled types
         raise TypeError(f"Type {type(obj)} not serializable")
 
+    def compute_the_values(self):
+        """
+        Compute the values of the configuration.
+        This method can be customized to perform specific calculations or transformations.
+        """
+        self =  {"cpf_contribution_rates.below_55.total_contribution.amount": 2778,"allocation_above_55.oa.above_70.allocation": 0.08,"allocation_above_55.oa.above_70.formula": "allocation_above_55.oa.above_70.amount = cpf_contribution_rates.below_55.total_contribution.amount * allocation",
+                }
+        # Example: Convert all string values to uppercase
+        for key, value in self.data.items():
+            if isinstance(value, dict):
+                self.data[key] = value.upper()
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, str):
+                        self.data[key][sub_key] = sub_value.upper()
+         
+
+
+    def evaluate_formulas(self):
+        context = {k: v for k, v in self.data.items() if not isinstance(v, str)}
+
+        for key, formula in self.data.items():
+            if isinstance(formula, str) and '=' in formula:
+                # Extract LHS and RHS from the formula string
+                lhs, expr = map(str.strip, formula.split('='))
+
+                # Replace dot-keys in RHS with values from context
+                def repl(match):
+                    var = match.group(0)
+                    return str(context.get(var, 0))  # fallback to 0 if missing
+
+                # Build regex pattern for dot notation keys
+                pattern = r"[a-zA-Z_][a-zA-Z0-9_.]*"
+                evaluated_expr = re.sub(pattern, repl, expr)
+
+                try:
+                    # Safely evaluate the math expression
+                    result = eval(evaluated_expr, {"__builtins__": {}}, {})
+                    self[lhs] = result
+                    context[lhs] = result
+                except Exception as e:
+                    print(f"Failed to evaluate '{formula}': {e}")
+
+        return self       
+    
+    def get_nested_value(self,nested, dotted_key):
+        """
+        Retrieve a value from a nested dictionary using a dotted key.
+        :param nested: The nested dictionary to search.
+        :param dotted_key: The dotted key string (e.g., "a.b.c").
+        :return: The value associated with the dotted key or None if not found.
+        """
+        if not isinstance(nested, dict):
+            raise TypeError("The first argument must be a dictionary.")
+        if not isinstance(dotted_key, str):
+            raise TypeError("The second argument must be a string.")
+        keys = dotted_key.split(".")
+        for key in keys:
+            if isinstance(nested, dict) and key in nested:
+                nested = nested[key]
+            else:
+                return None  # Key path broken
+        return nested
+
+
+         
+         
 
 
 # Example usage
@@ -150,26 +213,32 @@ if __name__ == "__main__":
     try:
      
         # Load the configuration
-        config_loader = ConfigLoader('cpf_config_test.json')
-        flattened_config = flatten_dict(config_loader.data)
-        print(flattened_config)
-        
-        
-        
-        
-        with open('cpf_config_test_flat.json', 'w') as f:
-            json.dump(flattened_config, f, indent=4, default=custom_serializer)
-        
-        
-        
-        
-       
-       
-        # Get keys and values from the configuration
-          
-          
-            
-    except FileNotFoundError:
-       print("Configuration file not found.")
+        config_loader = ConfigLoader('cpf_config_flat.json')
+        config_loader.evaluate_formulas()
+    except:
+        print('test')
+   
+   
+   
+   
+       #print(flattened_config)
+       #
+       #
+       #
+       #
+       #with open('cpf_config_test_flat.json', 'w') as f:
+       #    json.dump(flattened_config, f, indent=4, default=config_loader.custom_serializer)
+       #
+       #
+       #
+       #
+       #
+       #
+       ## Get keys and values from the configuration
+       #  
+       #  
+       #    
+       #exc#pt FileNotFoundError:
+       #rint("Configuration file not found.")
 
 

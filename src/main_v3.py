@@ -1,13 +1,13 @@
 import streamlit as st
 import json
-from cpf_config_loader_v5 import ConfigLoader
+from cpf_config_loader_v7 import ConfigLoader
 
 st.set_page_config(page_title="CPF Simulation Setup", layout="wide")
 st.title("🧾 CPF Simulation Configurator")
 
 # Load the configuration
 config_loader = ConfigLoader("cpf_config_flat.json")
-flat_config = config_loader.config
+flat_config = config_loader.data
 
 # Display the flat dictionary in the Streamlit app
 st.subheader("🔧 Edit Parameters")
