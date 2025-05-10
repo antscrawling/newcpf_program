@@ -110,38 +110,38 @@ class ConfigLoader:
         extract(self.data)
         return keys, values
     
-def flatten_dict(d, parent_key="", sep="."):
-    """
-    Flattens a nested dictionary into a single-level dictionary with keys joined by `sep`.
-    """
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+    def flatten_dict(d, parent_key="", sep="."):
+        """
+        Flattens a nested dictionary into a single-level dictionary with keys joined by `sep`.
+        """
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
 
-def unflatten_dict(d, sep="."):
-    """
-    Converts a flattened dictionary with keys like 'a.b.c' back into a nested dictionary.
-    """
-    result = {}
-    for k, v in d.items():
-        keys = k.split(sep)
-        current = result
-        for key in keys[:-1]:
-            current = current.setdefault(key, {})
-        current[keys[-1]] = v 
-    return result
+    def unflatten_dict(d, sep="."):
+        """
+        Converts a flattened dictionary with keys like 'a.b.c' back into a nested dictionary.
+        """
+        result = {}
+        for k, v in d.items():
+            keys = k.split(sep)
+            current = result
+            for key in keys[:-1]:
+                current = current.setdefault(key, {})
+            current[keys[-1]] = v 
+        return result
 
-def custom_serializer(obj):
-    """Custom serializer for non-serializable objects like datetime."""
-    if isinstance(obj, (datetime, date)):
-        return obj.strftime("%Y-%m-%d %H:%M:%S")
-    # It's better to raise TypeError for unhandled types
-    raise TypeError(f"Type {type(obj)} not serializable")
+    def custom_serializer(obj):
+        """Custom serializer for non-serializable objects like datetime."""
+        if isinstance(obj, (datetime, date)):
+            return obj.strftime("%Y-%m-%d %H:%M:%S")
+        # It's better to raise TypeError for unhandled types
+        raise TypeError(f"Type {type(obj)} not serializable")
 
 
 

@@ -104,4 +104,3 @@ cpf_reconfigure_date_v2.py
 
 docker build -t antscrawlingjay/cpf-simulator .
 docker run -p 8501:8501 antscrawlingjay/cpf-simulator
-docker run -p 8501:8501 antscrawlingjay/cpf-simulator
