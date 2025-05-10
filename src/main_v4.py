@@ -1,14 +1,15 @@
 import streamlit as st
 import subprocess
 import json
-from cpf_config_loader_v7 import ConfigLoader
+from cpf_config_loader_v8 import ConfigLoader
 
 st.set_page_config(page_title="CPF Simulation Setup", layout="wide")
 st.title("🧾 CPF Simulation Configurator")
 
 # Load the configuration
-config_loader = ConfigLoader("cpf_config_flat.json")
-flat_config = config_loader.data
+flat_config = ConfigLoader("cpf_config_flat.json")
+config = ConfigLoader('cpf_config.json')
+
 
 # Display the flat dictionary in the Streamlit app
 st.subheader("🔧 Edit Parameters")
@@ -29,8 +30,8 @@ for key, value in flat_config.items():
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-    if st.button("Save Configuration"):
-    # Convert updated_config back to a nested dictionary
+    if st.button("💾 Save"):
+        # Convert updated_config back to a nested dictionary
         def unflatten_dict(d, sep="."):
             result = {}
             for k, v in d.items():
@@ -40,12 +41,20 @@ with col1:
                     current = current.setdefault(key, {})
                 current[keys[-1]] = v
             return result
-    nested_config = unflatten_dict(updated_config)
 
-    # Save the updated configuration to a file
-    with open("cpf_config_flat_updated.json", "w") as f:
-        json.dump(nested_config, f, indent=4)
-    st.success("Configuration saved successfully!")
+        nested_config = unflatten_dict(updated_config)
+
+        # Save the updated configuration back to the file
+        
+        setattr(flat_config,)
+        st.success("Configuration saved successfully!")
+        
+
+
+        # Save the updated configuration to a file
+        with open("cpf_config_flat_updated.json", "w") as f:
+            json.dump(nested_config, f, indent=4)
+        st.success("Configuration saved successfully!")
     
 with col2:
     if st.button("Run Simulation"):
