@@ -108,14 +108,15 @@ class CPFLogEntry:
             # Extract log details
             date_str = log["date"]
             try:
-                # Try parsing as full datetime
-                self.xdate = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").date()
-            except ValueError:
-                try:
-                    # Try parsing as year-month
+                # Parse the date into YYYY-MM format
+                if len(date_str) == 7:  # Format: YYYY-MM
                     self.xdate = datetime.strptime(date_str, "%Y-%m").date()
-                except ValueError:
+                elif len(date_str) == 10:  # Format: YYYY-MM-DD
+                    self.xdate = datetime.strptime(date_str, "%Y-%m-%d").date()
+                else:
                     raise ValueError(f"Invalid date format: {date_str}")
+            except ValueError as e:
+                raise ValueError(f"Error parsing date '{date_str}': {e}")
 
             # Update the age for the current log entry
             self.age = self.calculate_age()
@@ -134,18 +135,18 @@ class CPFLogEntry:
             # Extract year-month for the DATE_KEY
             date_key = self.xdate.strftime("%Y-%m")
 
-            # Append the row to the report data
+            # Append the row to the report data, rounding amounts to 2 decimal places
             report_data.append({
                 "DATE_KEY": date_key,
                 "AGE": self.age,
-                "INFLOW": self.inflow,
-                "OUTFLOW": self.outflow,
-                "OA": self.oa_balance,
-                "SA": self.sa_balance,
-                "MA": self.ma_balance,
-                "RA": self.ra_balance,
-                "LOANS": self.loan_balance,
-                "EXCESS": self.excess_balance,
+                "INFLOW": round(self.inflow, 2),
+                "OUTFLOW": round(self.outflow, 2),
+                "OA": round(self.oa_balance, 2),
+                "SA": round(self.sa_balance, 2),
+                "MA": round(self.ma_balance, 2),
+                "RA": round(self.ra_balance, 2),
+                "LOANS": round(self.loan_balance, 2),
+                "EXCESS": round(self.excess_balance, 2),
                 "TYPE": self.flow_type,
                 "MESSAGE": self.message
             })
@@ -167,7 +168,7 @@ class CPFLogEntry:
 
 if __name__ == "__main__":
     # Example usage
-    csv_file_path = "/Users/joseibay/Documents/newcpf_program/cpf_logs_parsed.csv"
+    csv_file_path = "cpf_log_file.csv"
     cpflogs = CPFLogEntry(csv_file_path)
     cpflogs.build_report()
 

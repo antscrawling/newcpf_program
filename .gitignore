@@ -14,3 +14,8 @@ src/xrun_cpf_simulation_v8.py
 cpf_logs_updated.json
 cpf_logs.json
 cpf_simulation.db
+src/__pycache__/cpf_cleanup_logs_v1.cpython-313.pyc
+src/__pycache__/cpf_config_loader_v5.cpython-313.pyc
+src/__pycache__/cpf_data_saver_v3.cpython-313.pyc
+src/__pycache__/cpf_program_v9.cpython-313.pyc
+src/__pycache__/cpf_program_v10.cpython-313.pyc

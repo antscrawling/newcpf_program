@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 from cpf_config_loader_v4 import ConfigLoader
 
-from cpf_data_saver_v2 import DataSaver  # Import DataSaver class
+from cpf_data_saver_v3 import DataSaver  # Import DataSaver class
 
 from multiprocessing import Process, Queue
 import sqlite3
@@ -15,7 +15,7 @@ config = ConfigLoader('cpf_config.json')
 # Define the worker function at the top level (outside the class)
 def _save_log_worker(queue, filename):
     """Worker process to save logs to a file."""
-    data_saver = DataSaver(format='json')  # Use DataSaver with JSON format
+    data_saver = DataSaver(format='csv',filename='cpf_log_file.csv')  # Use DataSaver with JSON format
     try:
         while True:
             try:
@@ -112,7 +112,8 @@ class CPFAccount:
         self._combinedabove55_balance = 0.0
         self._combinedabove55_log = []
         self._combinedabove55_message = ""
-       
+        
+        self.loglist_entry = []
         
         # Log saving setup
         self.log_queue = Queue()
@@ -165,6 +166,7 @@ class CPFAccount:
         else:
             value, self.message = float(data), "no message"
         diff = value - self._oa_balance
+        #loglist_entry.append()
         log_entry = {
             'date': self.date_key,
             'account': 'oa',
@@ -176,7 +178,8 @@ class CPFAccount:
         }
         self._oa_balance = value.__round__(2)
         self._oa_message = self.message
-        self.save_log_to_file(log_entry)
+        #self.loglist_entry.append(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def sa_balance(self):
@@ -205,7 +208,7 @@ class CPFAccount:
         self._sa_message = self.message
 
         # Save the log entry using multiprocessing
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def ma_balance(self):
@@ -229,7 +232,7 @@ class CPFAccount:
         }
         self._ma_balance = value.__round__(2)
         self._ma_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def ra_balance(self):
@@ -253,7 +256,7 @@ class CPFAccount:
         }
         self._ra_balance = value
         self._ra_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def excess_balance(self):
@@ -277,7 +280,7 @@ class CPFAccount:
         }
         self._excess_balance = value.__round__(2)
         self._excess_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def loan_balance(self):
@@ -301,7 +304,7 @@ class CPFAccount:
         }
         self._loan_balance = value.__round__(2)
         self._loan_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def combined_balance(self):
@@ -333,7 +336,7 @@ class CPFAccount:
         }
         self._combined_balance = value.__round__(2)
         self._combined_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def combinedbelow55_balance(self):
@@ -369,7 +372,7 @@ class CPFAccount:
         }
         self._combinedbelow55_balance = value.__round__(2)
         self._combinedbelow55_balance_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     @property
     def combinedabove55_balance(self):
@@ -405,7 +408,7 @@ class CPFAccount:
         }
         self._combinedabove55_balance = value.__round__(2)
         self._combinedabove55_balance_message = self.message
-        self.save_log_to_file(log_entry)
+        self.loglist_entry.append(log_entry)
 
     def __enter__(self):
         """Enter the runtime context related to this object."""

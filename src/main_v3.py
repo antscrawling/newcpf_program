@@ -92,14 +92,6 @@ with col4:
         
         
         
-     #  df = pd.DataFrame({"Key": keys, "Value": values})
-     #  csv = df.to_csv(index=False).encode("utf-8")
-     #  st.download_button(
-     #      label="Download CSV",
-     #      data=csv,
-     #      file_name="cpf_config.csv",
-     #      mime="text/csv",
-     #  )
 
 with col5:
     if st.button("📤 Export as XML"):

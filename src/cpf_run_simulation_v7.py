@@ -1,12 +1,12 @@
 from cpf_config_loader_v4 import ConfigLoader
-from cpf_program_v9 import CPFAccount
+from cpf_program_v10 import CPFAccount
 from tqdm import tqdm  # For the progress bar
 from cpf_date_generator_v4 import DateGenerator
 import os
 import sqlite3
 from pydantic import BaseModel  # Import BaseModel
 import json
-from src.cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
+#from cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
 
 # Load the configuration file
 with open("cpf_config.json", "r") as f:
@@ -52,39 +52,6 @@ def loan_computation_first_three_years(cpf):
     payment_key = 'year_1_2' if cpf.age < 24 else 'year_3'
     float(loan_payments.getdata(payment_key, 0.0)) if payment_key in loan_payments else 0.0
 
-def import_log_file_and_save_to_sqlite(log_filepath: str, conn):
-    """
-    Import a log file and save its contents to the SQLite database.
-
-    :param log_filepath: Path to the log file.
-    :param conn: SQLite connection object.
-    """
-    with open(log_filepath, 'r') as f:
-        for line in f:
-            try:
-                log_entry = json.loads(line)
-                # Extract values from the log entry
-                date_key = log_entry['date_key'].strftime("%Y-%m-%d")  # Convert to string format
-                age = log_entry['age']
-                oa_balance = log_entry['oa_balance']
-                sa_balance = log_entry['sa_balance']
-                ma_balance = log_entry['ma_balance']
-                ra_balance = log_entry['ra_balance']
-                loan_balance = log_entry['loan_balance']
-                excess_balance = log_entry['excess_balance']
-                cpf_payout = log_entry['cpf_payout']
-
-                # Insert into the database
-                sql = """
-                INSERT OR REPLACE INTO cpf_data (date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """
-                cur = conn.cursor()
-                cur.execute(sql, (date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout))
-            except json.JSONDecodeError as e:
-                print(f"Error decoding JSON: {e}")
-            except sqlite3.Error as e:
-                print(f"SQLite error: {e}")
                 
 def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     # Step 1: Load the configuration
@@ -306,88 +273,30 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
             # Pass birth_date as a string
            # display_data_from_db()  # Remove the argument
     #this transforms the logs from json to csv.
-    
-    cleanup()
 
-#def load_and_resave_log_as_json(log_filepath: str, output_json_filepath: str):
-#    """
-#    Load a log file and resave it as a JSON file.
-#
-#    :param log_filepath: Path to the log file.
-#    :param output_json_filepath: Path to save the JSON file.
-#    """
-#    config_path = log_filepath
-#    output_path =  output_json_filepath
-#    if not os.path.exists(log_filepath):
-#        print(f"Log file '{log_filepath}' does not exist.")
-#        return
-#
-#    try:
-#        
-#        import json
-#        from datetime import datetime, date
-#        with open(config_path, 'r') as f:
-#            # Attempt to load the entire file content as a single JSON object
-#            try:
-#                logs = json.load(f)
-#                if not isinstance(logs, list):
-#                    logs = [logs]  # Ensure it's a list for consistent processing
-#            except json.JSONDecodeError:
-#                # If the file contains multiple JSON objects, load it line by line
-#                f.seek(0)  # Reset file pointer to the beginning
-#                logs = []
-#                for line in f:
-#                    try:
-#                        logs.append(json.loads(line))
-#                    except json.JSONDecodeError as e:
-#                        print(f"Skipping invalid JSON line: {line.strip()} - {e}")
-#                        continue
-#
-#
-#        #convert list to dictionary
-#        for item in logs:
-#            if isinstance(item, dict):
-#                for key, value in item.items():
-#                    if isinstance(value, (datetime, date)):
-#                        item[key] = value.strftime("%Y-%m-%d")
-#                    elif isinstance(value, list):
-#                        item[key] = [v.strftime("%Y-%m-%d") if isinstance(v, (datetime, date)) else v for v in value]
-#                    elif isinstance(value, str|int|float):
-#                       # item[key] = value
-#                        #try:
-#                        #    item[key] = datetime.strptime(value, "%Y-%m-%d").date()
-#                        #except ValueError:
-#                        #    pass  # not a date-formatted string
-#                        item[key] = value
-#        #logs = {log['account']: log for log in logs}    
-#
-#
-#
-#        ##save using datasaver
-#        #ds = DataSaver(format='json')
-#        #for log in logs:
-#        #    ds.append(log)
-#
-#        config_path = log_filepath
-#        output_path =  output_json_filepath
-#
-#        with open(output_path, 'w') as f:
-#            json.dump(logs, f, default=str, indent=4)
-#        with open(output_path, 'r') as f:
-#            # Attempt to load the entire file content as a single JSON object
-#            try:
-#                logs = json.load(f)
-#                if not isinstance(logs, list):
-#                    logs = [logs]  # Ensure it's a list for consistent processing
-#            except json.JSONDecodeError:
-#                # If the file contains multiple JSON objects, load it line by line
-#                f.seek(0)
-#        #import_log_file_and_save_to_sqlite(logs, create_connection())
-#
-#
-#    except Exception as e:
-#        print(f"Error processing log file: {e}")
-#        return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def display_data_from_db():
     """Displays CPF data from the database for monthly data between 2025-05 and 2061-12."""
@@ -490,7 +399,7 @@ if __name__ == "__main__":
     }
     }
     main(dicct = mydict)
-    log_filepath = "cpf_logs.json"  # Replace with the actual log file pathfile path
+  #  log_filepath = "cpf_logs.json"  # Replace with the actual log file pathfile path
    #utput_json_filepath = "cpf_logs_updated.json"  # Replace with the desired JSON file pathfile path
    # Create the file if it doesn't exist before calling the function
    #f not os.path.exists(log_filepath):

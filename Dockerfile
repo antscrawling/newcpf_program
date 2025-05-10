@@ -26,4 +26,4 @@ COPY secrets.toml /root/.streamlit/secrets.toml
 EXPOSE 8501
 
 # Run the Streamlit app
-CMD ["streamlit", "run", "main_v2.py", "--server.port=8501", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+CMD ["streamlit", "run", "main_v3.py", "--server.port=8501", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
