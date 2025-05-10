@@ -640,7 +640,7 @@ class CPFAccount:
         Apply extra interest to SA and MA accounts based on age.
         This is called every December - 12 of every year.
         """
-        extra_interest = self.config.getdata(['extra_interest'], {})
+        #extra_interest = self.config.getdata(['extra_interest'], {})
         extra_interest_rate = self.config.getdata(['extra_interest', 'below_55'], 1.0)
         extra_interest1 = self.config.getdata(['extra_interest', 'first_30k_above_55'], 2.0)
         extra_interest2 = self.config.getdata(['extra_interest', 'next_30k_above_55'], 1.0)
