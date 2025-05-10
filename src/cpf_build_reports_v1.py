@@ -126,7 +126,7 @@ class CPFLogEntry:
             self.message = log["message"]
 
             account = log["account"]
-            amount = log["amount"]
+            amount = log["amount"].__round__(2)
             match account:
                 case "oa":
                     self.oa_balance += amount

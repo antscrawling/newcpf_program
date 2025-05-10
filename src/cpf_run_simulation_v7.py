@@ -7,6 +7,8 @@ import sqlite3
 #from pydantic import BaseModel  # Import BaseModel
 import json
 #from cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
+from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 
 # Load the configuration file
 with open("cpf_config.json", "r") as f:
@@ -52,6 +54,22 @@ def loan_computation_first_three_years(cpf):
     payment_key = 'year_1_2' if cpf.age < 24 else 'year_3'
     float(loan_payments.getdata(payment_key, 0.0)) if payment_key in loan_payments else 0.0
 
+def compute_age(start_date : datetime.date, birth_date : datetime.date) -> int:
+    """
+    Compute the age based on the start date and birth date.
+    The age increments by 1 every July 6.
+    """
+    # Calculate the base age
+    base_age = relativedelta(start_date, birth_date).years
+    if start_date.month >= birth_date.month:
+        base_age += 1
+    return  base_age
+
+
+    
+    
+    
+    
                 
 def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     # Step 1: Load the configuration
@@ -86,15 +104,17 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
         # this method will update the cpf_config.json with the amounts needed in allocation.
         #cpf.calculate_total_contributions()
         cpf.compute_and_add_allocation()
-       
+        cpf.age = compute_age(start_date, birth_date)
+        cpf.current_date = start_date
         print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
         print("-" * 150)
 
 
         if is_initial:
             print("Loading initial balances from config...")
-            # Use property setters to ensure logging
-            cpf.date_key = cpf.custom_serializer(cpf.current_date)
+            # Use property setters to ensure logging                                                                                                            
+               
+            cpf.date_key = date_dict.get('2025-05-01', {}).get('period_end', None)
             initoa_balance = float(cpf.config.getdata('oa_balance', 0.0))
             initsa_balance = float(cpf.config.getdata('sa_balance', 0.0))
             initma_balance = float(cpf.config.getdata('ma_balance', 0.0))

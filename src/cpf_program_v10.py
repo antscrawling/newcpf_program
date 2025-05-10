@@ -23,6 +23,7 @@ def _save_log_worker(queue, filename):
             f,
             fieldnames=[
                 "date",
+                "age",  # Include 'age' in the fieldnames
                 "account",
                 "old_balance",
                 "new_balance",
@@ -36,7 +37,11 @@ def _save_log_worker(queue, filename):
             log_entry = queue.get()
             if log_entry == "STOP":
                 break
-            writer.writerow(log_entry)
+            try:
+                writer.writerow(log_entry)
+            except ValueError as e:
+                print(f"Error writing log entry: {e}")
+                print(f"Log entry: {log_entry}")
 
 
 # Define the custom serializer at the top level or as a static method
@@ -150,8 +155,11 @@ class CPFAccount:
     def close_log_writer(self):
         """Stop the log writer process."""
         if self.log_process.is_alive():
-            self.log_queue.put("STOP")
-            self.log_process.join()
+            try:
+                self.log_queue.put("STOP")
+                self.log_process.join(timeout=5)  # Wait for the process to terminate
+            except Exception as e:
+                print(f"Error while closing log writer: {e}")
 
     @property
     def oa_balance(self):
@@ -900,7 +908,7 @@ class CPFAccount:
 if __name__ == "__main__":
     try:
         config_loader = ConfigLoader("cpf_config.json")
-        mycpf = CPFAccount(config_loader=config_loader)
+        myself = CPFAccount(config_loader=config_loader)
         ages = [25, 55, 60, 65, 70, 75]
         for age in ages:
             myself.age = age
