@@ -2,6 +2,11 @@ import pandas as pd
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from typing import Any
+import os
+
+CONFIG_FILENAME = 'cpf_config.json'
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Dynamically determine the src directory
+LOG_FILE_PATH = os.path.join(SRC_DIR, "cpf_log_file.csv")  # Log file path inside src folder
 
 
 class CPFLogEntry:

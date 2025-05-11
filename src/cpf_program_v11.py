@@ -1,23 +1,25 @@
 import atexit
 from datetime import datetime
 import csv
-
-# from dateutility import  MyDateDictGenerator
 import json
 from cpf_config_loader_v6 import ConfigLoader
-
 from cpf_data_saver_v3 import DataSaver  # Import DataSaver class
-
 from multiprocessing import Process, Queue
 import sqlite3
+import os
+
+# Dynamically determine the src directory
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+LOG_FILE_PATH = os.path.join(SRC_DIR, "cpf_log_file.csv")  # Log file path inside src folder
 
 # Load configuration
-config = ConfigLoader("cpf_config.json")
+config = ConfigLoader(CONFIG_FILENAME)
 
 
 # Define the worker function at the top level (outside the class)
 def _save_log_worker(queue, filename):
-    """Worker process to save logs to a file."""
+    """Worker process to save logs to file."""
     with open(filename, "w", newline="") as f:
         writer = csv.DictWriter(
             f,
@@ -44,12 +46,10 @@ def _save_log_worker(queue, filename):
                 print(f"Log entry: {log_entry}")
 
 
-# Define the custom serializer at the top level or as a static method
 def custom_serializer(obj):
     """Custom serializer for non-serializable objects like datetime."""
     if isinstance(obj, datetime):
         return obj.strftime("%Y-%m-%d %H:%M:%S")
-    # It's better to raise TypeError for unhandled types
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
@@ -64,78 +64,19 @@ class CPFAccount:
         self.birth_date = None
         self.salary = self.config.getdata("salary", 0.0)
         self.age = 0
-        self._oa_allocation55 = 0.0
-        self._sa_allocation55 = 0.00
-        self._ma_allocation55 = 0.00
-        self._ra_allocation55 = 0.00
-        self._oa_allocation5560 = 0.00
-        self._sa_allocation5560 = 0.00
-        self._ma_allocation5560 = 0.00
-        self._ra_allocation5560 = 0.00
-        self._oa_allocation6065 = 0.00
-        self._ma_allocation6065 = 0.00
-        self._ra_allocation6065 = 0.00
-        self._oa_allocation6570 = 0.00
-        self._ma_allocation6570 = 0.00
-        self._ra_allocation6570 = 0.00
-        self._oa_allocation70 = 0.00
-        self._ma_allocation70 = 0.00
-        self._ra_allocation70 = 0.00
 
         # Account balances and logs
         self._oa_balance = 0.0
-        self._oa_log = []
-        self._oa_message = ""
-        self._oa_allocation = 0.0
-
         self._sa_balance = 0.0
-        self._sa_log = []
-        self._sa_message = ""
-        self._sa_allocation = 0.0
-
         self._ma_balance = 0.0
-        self._ma_log = []
-        self._ma_message = ""
-        self._ma_allocation = 0.0
-
         self._ra_balance = 0.0
-        self._ra_log = []
-        self._ra_message = ""
-        self._ra_allocation = 0.0
-
-        self.employer_contribution = 0.0
-        self.employee_contribution = 0.0
-        self.total_contribution = 0.0
-
         self._excess_balance = 0.0
-        self._excess_balance_log = []
-        self._excess_message = ""
-
         self._loan_balance = 0.0
-        self._loan_balance_log = []
-        self._loan_message = ""
-
-        self._combined_balance = 0.0
-        self._combined_balance_log = []
-        self._combined_message = ""
-
-        self._combinedbelow55_balance = 0.0
-        self._combinedbelow55_log = []
-        self._combinedbelow55_message = ""
-
-        self._combinedabove55_balance = 0.0
-        self._combinedabove55_log = []
-        self._combinedabove55_message = ""
-
-        self.loglist_entry = []
 
         # Log saving setup
         self.log_queue = Queue()
-        # Use the top-level worker function as the target
-        # Pass only the queue and filename, which are picklable
-        # datestring = self.current_date.strftime("%Y%m%d")
         self.log_process = Process(
-            target=_save_log_worker, args=(self.log_queue, "cpf_log_file.csv")
+            target=_save_log_worker, args=(self.log_queue, LOG_FILE_PATH)
         )
         self.log_process.daemon = (
             True  # Ensure the process terminates with the main program

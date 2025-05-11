@@ -5,6 +5,9 @@ from typing import Any  # Import Any for type hinting
 import re
 DATE_FORMAT = "%Y-%m-%d"
 
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+DATABASE_NAME = os.path.join(SRC_DIR, 'cpf_simulation.db')  # Full path to the database file
 
 class ConfigLoader:
     """

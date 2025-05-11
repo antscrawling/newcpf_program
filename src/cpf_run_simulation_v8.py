@@ -1,22 +1,20 @@
 from cpf_config_loader_v6 import ConfigLoader
-from cpf_program_v11 import CPFAccount
+from cpf_program_v10 import CPFAccount
 from tqdm import tqdm  # For the progress bar
 from cpf_date_generator_v4 import DateGenerator
 import os
 import sqlite3
-#from pydantic import BaseModel  # Import BaseModel
 import json
-#from cpf_cleanup_logs_v1 import cleanup_the_logs as cleanup 
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
-import jmespath
+
+# Dynamically determine the src directory
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+DATABASE_NAME = os.path.join(SRC_DIR, 'cpf_simulation.db')  # Full path to the database file
 
 # Load the configuration file
-with open("cpf_config.json", "r") as f:
-    config_data = json.load(f)
-
-# Database setup
-DATABASE_NAME = 'cpf_simulation.db'
+config_loader = ConfigLoader(CONFIG_FILENAME)
 
 def create_connection():
     """Creates a database connection to the SQLite database."""
@@ -425,10 +423,9 @@ if __name__ == "__main__":
 
   
     main(dicct=mydict)
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+

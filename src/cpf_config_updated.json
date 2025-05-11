@@ -75,7 +75,7 @@
     },
     "cpf_payout_age": 67,
     "age_of_brs": 55,
-    "start_date": "2025-04-01",
+    "start_date": "2025-05-01",
     "end_date": "2080-07-31",
     "birth_date": "1974-07-06",
     "salary": 7400,
@@ -142,11 +142,7 @@
     },
     "NEW_KEY": "New Value Example",
     "2": "test",
-    "some_list_there": [
-        1,
-        2,
-        3
-    ],
+    "some_list_there": "1,2,3",
     "oa": {
         "oa": 0.0,
         "sa": 0.0,

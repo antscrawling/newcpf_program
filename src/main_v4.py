@@ -2,20 +2,21 @@ import streamlit as st
 import subprocess
 import json
 from cpf_config_loader_v8 import ConfigLoader
+import os
+
+PATH = os.path.dirname(os.path.abspath(__file__))  # Dynamically determine the src directory
 
 st.set_page_config(page_title="CPF Simulation Setup", layout="wide")
 st.title("🧾 CPF Simulation Configurator")
 
 # Load the configuration
-flat_config = ConfigLoader("cpf_config_flat.json")
-config = ConfigLoader('cpf_config.json')
-
-
+flat_config = ConfigLoader(os.path.join(PATH, "cpf_config_flat.json"))
+#
 # Display the flat dictionary in the Streamlit app
 st.subheader("🔧 Edit Parameters")
 updated_config = {}
 
-for key, value in flat_config.items():
+for key, value in flat_config._config_data.items():
     if isinstance(value, (int, float)):
         updated_value = st.number_input(key, value=value)
     elif isinstance(value, str):
@@ -27,7 +28,7 @@ for key, value in flat_config.items():
 
 
 # Save the updated configuration
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6  = st.columns(6)
 
 with col1:
     if st.button("💾 Save"):
@@ -46,20 +47,20 @@ with col1:
 
         # Save the updated configuration back to the file
         
-        setattr(flat_config,)
+        flat_config.update
         st.success("Configuration saved successfully!")
         
 
 
         # Save the updated configuration to a file
-        with open("cpf_config_flat_updated.json", "w") as f:
+        with open(os.path.join(PATH, "cpf_config_flat_updated.json"), "w") as f:
             json.dump(nested_config, f, indent=4)
         st.success("Configuration saved successfully!")
     
 with col2:
     if st.button("Run Simulation"):
-        result = subprocess.run(["python",  "cpf_run_simulation_v8.py"], check=True, capture_output=True, text=True)
-    with open("cpf_config_flat_updated.json", "w") as f:
+        result = subprocess.run(["python", os.path.join(PATH, "cpf_run_simulation_v8.py")], check=True, capture_output=True, text=True)
+    with open(os.path.join(PATH, "cpf_config_flat_updated.json"), "w") as f:
         json.dump(updated_config, f, indent=4)
     st.success("Configuration saved successfully!")
     
@@ -68,7 +69,7 @@ with col3:
    if st.button("🚀 Run CSV report"):
        # Run the simulation script
        try:
-           result = subprocess.run(["python", "ccpf_build_reports_v1.py"], check=True, capture_output=True, text=True)
+           result = subprocess.run(["python", os.path.join(PATH, "ccpf_build_reports_v1.py")], check=True, capture_output=True, text=True)
            st.success("Simulation completed!")
            st.code(result.stdout)
        except subprocess.CalledProcessError as e:
@@ -81,7 +82,7 @@ with col4:
         
 with col5:
     import dicttoxml
-    xml = dicttoxml.dicttoxml(config_loader.data)
+    xml = dicttoxml.dicttoxml(flat_config._config_data)
     st.download_button(
         label="Download XML",
         data=xml,
@@ -93,10 +94,9 @@ with col6:
     if st.button(" EXIT "):
         # Export the updated configuration as a CSV file
         st.stop()
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+

@@ -7,6 +7,9 @@ from dateutil.relativedelta import relativedelta
 from pprint import pprint
 
 DATE_FORMAT = "%Y-%m-%d"
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+DATABASE_NAME = os.path.join(SRC_DIR, 'cpf_simulation.db')  # Full path to the database file
 
 
 class ConfigLoader:
@@ -14,7 +17,7 @@ class ConfigLoader:
     Load config from JSON, converting date strings to datetime objects.
     Also supports saving the config back to JSON (round-trip).
     """
-    def __init__(self, config_path):
+    def __init__(self, config_path=CONFIG_FILENAME):
         # Resolve the absolute path of the configuration file
         self.config_path = os.path.abspath(config_path)
         self.data = None
@@ -51,7 +54,7 @@ class ConfigLoader:
 
         self.data = config_data
 
-    def save(self, output_path=None):
+    def save(self, output_path=CONFIG_FILENAME):
         """Save current config data back to JSON (converting datetime to string)."""
         serializable_data = {}
         for key, value in self.data.items():
