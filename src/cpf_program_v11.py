@@ -2,16 +2,19 @@ import atexit
 from datetime import datetime
 import csv
 import json
-from cpf_config_loader_v6 import ConfigLoader
+from cpf_config_loader_v9 import ConfigLoader
 from cpf_data_saver_v3 import DataSaver  # Import DataSaver class
 from multiprocessing import Process, Queue
 import sqlite3
 import os
+from datetime import date, datetime
 
 # Dynamically determine the src directory
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
 CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
 LOG_FILE_PATH = os.path.join(SRC_DIR, "cpf_log_file.csv")  # Log file path inside src folder
+DATE_KEYS = ['start_date', 'end_date', 'birth_date']
+DATE_FORMAT = "%Y-%m-%d"
 
 # Load configuration
 config = ConfigLoader(CONFIG_FILENAME)
@@ -64,6 +67,7 @@ class CPFAccount:
         self.birth_date = None
         self.salary = self.config.getdata("salary", 0.0)
         self.age = 0
+        self.payout = 0.0
 
         # Account balances and logs
         self._oa_balance = 0.0
@@ -377,6 +381,21 @@ class CPFAccount:
         """Ensure the log writer process is properly closed."""
         self.close_log_writer()
 
+    def convert_date_strings(self, key:str, date_str:str):    
+        """
+        Convert date strings in the configuration to datetime objects.
+        """
+        
+        if isinstance(date_str, str) and key.lower() in DATE_KEYS:
+            try:
+                return datetime.strptime(date_str, DATE_FORMAT).date()
+            except ValueError:
+                pass
+        elif isinstance(date_str, (date, datetime)):
+            return date_str
+        else:
+            raise ValueError(f"Invalid date format for {key}: {date_str}. Expected format: YYYY-MM-DD")
+        
     def get_date_dict(self, start_date, end_date, birth_date):
         """Generate a date dictionary.  #this is called once only"""
         print(
@@ -438,25 +457,41 @@ class CPFAccount:
         conn,
         date_key,
         age,
-        oa_balance,
-        sa_balance,
-        ma_balance,
-        ra_balance,
-        loan_balance,
-        excess_balance,
-        cpf_payout,
+        _oa_balance,
+        _sa_balance,
+        _ma_balance,
+        _ra_balance,
+        _loan_balance,
+        _excess_balance,
+        payout,
+        message
     ):
         """Inserts CPF data into the database."""
         try:
-            sql = f"""
-                INSERT OR REPLACE INTO cpf_data (date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout)
-                VALUES ('{date_key}', {age}, {oa_balance}, {sa_balance}, {ma_balance}, {ra_balance}, {loan_balance}, {excess_balance}, {cpf_payout});
+            sql = """
+                INSERT OR REPLACE INTO cpf_data (
+                    date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout, message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
             cur = conn.cursor()
-            cur.execute(sql)
+            cur.execute(sql, (
+                date_key,
+                age,
+                _oa_balance,
+                _sa_balance,
+                _ma_balance,
+                _ra_balance,
+                _loan_balance,
+                _excess_balance,
+                payout,
+                message
+            ))
             conn.commit()
-        except sqlite3.Error as e:
+        except (sqlite3.Error, sqlite3.DatabaseError) as e:
             print(f"Database insertion error: {e}")
+        except SyntaxError as f:
+            print(f"SQL Syntax error: {f}")
+            
 
     def calculate_cpf_allocation(self, account: str) -> float:
         """
@@ -526,7 +561,7 @@ class CPFAccount:
         self.calculate_total_contributions()
         allocation = {}
         mydict = {}
-        with open("cpf_config.json", "r") as file:
+        with open(CONFIG_FILENAME, "r") as file:
             mydict = json.load(file)
         # Determine the correct age bracket for contribution rates
         allocation = {
@@ -603,7 +638,7 @@ class CPFAccount:
             },
         }
         allocation.update(mydict)
-        with open("cpf_config.json", "w") as file:
+        with open(CONFIG_FILENAME, "w") as file:
             json.dump(allocation, file, indent=4)
 
     # self.config.add_key_value(allocation, None)
@@ -796,7 +831,8 @@ class CPFAccount:
         brs_payout = self.config.getdata(["retirement_sums", "brs", "payout"], 0.0)
 
         if self.age >= payout_age:
-            return brs_payout
+            self.payout = brs_payout
+            return self.payout
         else:
             return 0.0  # No payout before payout age
 

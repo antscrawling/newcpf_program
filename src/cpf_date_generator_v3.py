@@ -2,7 +2,36 @@
 from datetime import date, datetime # Ensure date is imported
 from dateutil.relativedelta import relativedelta
 from calendar import monthrange
-from cpf_data_saver_v2 import DataSaver
+from cpf_data_saver_v3 import DataSaver
+import os
+import json,csv
+
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+LOG_FILE_PATH = os.path.join(SRC_DIR, "cpf_log_file.csv")  # Log file path inside src folder
+DATE_KEYS = ['start_date', 'end_date', 'birth_date']
+DATE_FORMAT = "%Y-%m-%d"
+DATE_DICT = os.path.join(SRC_DIR, 'cpf_date_dict.json')  # Path to the date dictionary file
+DATE_LIST = os.path.join(SRC_DIR, 'cpf_date_list.csv')  # Path to the date list file
+
+def serialize(obj):
+    for key, value in obj.items():
+        if isinstance(value, (datetime, date)):
+            obj[key] = value.strftime(DATE_FORMAT)
+        elif isinstance(value, dict):
+            serialize(value)
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, (datetime, date)):
+                    item = item.strftime(DATE_FORMAT)
+                elif isinstance(item, dict):
+                    serialize(item)
+    return obj
+def custom_serializer(obj):
+    """Custom serializer for non-serializable objects like datetime."""
+    if isinstance(obj, datetime):
+        return obj.strftime("%Y-%m-%d %H:%M:%S")
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 class DateGenerator(object):
     """
@@ -16,11 +45,27 @@ class DateGenerator(object):
 }
     """
     def __init__(self, start_date, end_date, birth_date):
-        self.start_date = start_date
-        self.end_date = end_date
-        self.birth_date = birth_date
+        self.start_date = self.convert_date_strings('start_date', start_date)
+        self.end_date = self.convert_date_strings('end_date', end_date)
+        self.birth_date = self.convert_date_strings('birth_date', birth_date)
         self.date_dict = {}
+        self.date_list = []
 
+    def convert_date_strings(self, key:str, date_str:str):    
+        """
+        Convert date strings in the configuration to datetime objects.
+        """
+        
+        if isinstance(date_str, str) and key.lower() in DATE_KEYS:
+            try:
+                return datetime.strptime(date_str, DATE_FORMAT).date()
+            except ValueError:
+                pass
+        elif isinstance(date_str, (date, datetime)):
+            return date_str
+        else:
+            raise ValueError(f"Invalid date format for {key}: {date_str}. Expected format: YYYY-MM-DD")
+            
     def generate_date_dict(self):
         """
         Generates a dictionary of dates with start/end of month and age.
@@ -31,19 +76,27 @@ class DateGenerator(object):
         'age': age_at_period_end
             }
         """
-        # Input validation (optional but good practice)
-        if not isinstance(self.start_date, date) or isinstance(self.start_date, datetime):
-             raise TypeError(f"start_date must be a date object, got {type(start_date)}")
-        if not isinstance(self.end_date, date) or isinstance(self.end_date, datetime):
-             raise TypeError(f"end_date must be a date object, got {type(end_date)}")
-        if not isinstance(self.birth_date, date) or isinstance(self.birth_date, datetime):
-             raise TypeError(f"birth_date must be a date object, got {type(birth_date)}")
+       #if isinstance(self.start_date, str):
+       #    self.convert_dates_to_datetime(self.start_date)
+       #elif isinstance(self.end_date, str):
+       #    self.convert_dates_to_datetime(self.end_date)
+       #elif isinstance(self.birth_date, str):
+       #    self.convert_dates_to_datetime(self.birth_date)
+       #elif isinstance(self.start_date, (date, datetime)):
+       #    self.start_date = self.start_date
+       #elif isinstance(self.end_date, (date, datetime)):
+       #    self.end_date = self.end_date
+       #elif isinstance(self.birth_date, (date, datetime)):
+       #    self.birth_date = self.birth_date
+       #else:
+       #    raise TypeError("start_date, end_date, and birth_date must be date or datetime objects")                                    
     
         self.date_dict = {}
         # Start from the first day of the start month
-        current_date = self.start_date.replace(day=1)
+        current_date =date(self.start_date.year, self.start_date.month, 1)
     
         while current_date <= self.end_date:
+            date_list = []
             year = current_date.year
             month = current_date.month
     
@@ -68,7 +121,7 @@ class DateGenerator(object):
                 'period_end': period_end,
                 'age': age_at_period_end
             }
-    
+            date_list.append(self.date_dict)  # Append the current date_dict to the list
             # Move to the first day of the next month (date + relativedelta -> date)
             current_date = current_date + relativedelta(months=1)
             print(f'Procfessing Date Dictionary key = {date_key}, {age_at_period_end}')  # Debugging line to print each entry
@@ -76,23 +129,62 @@ class DateGenerator(object):
     
         return self.date_dict
     
-    def save_file(self):
+#    def convert_dates_to_datetime(self, date_str):
+#        """
+#        Convert date strings to datetime.date objects.
+#        """
+#        if isinstance(date_str, str):
+#            try:
+#                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+#                return date_obj
+#            except ValueError:
+#                raise ValueError(f"Invalid date format: {date_str}. Expected format: YYYY-MM-DD")
+       
+    def save_file(self, file , format='csv'):
         """
-        Save the date dictionary to file in the specified format: 'pickle' (binary), 'json', or 'shelve'.
+        Save the date_dict to a file in the specified format.
         """
-        data_saver = DataSaver()
-        data_saver.append(self.date_dict)
-        data_saver.close()
+       
+        if format == 'csv':
+            with open(DATE_LIST, 'w') as f:
+                for key, value in self.date_dict.items():
+                    f.write(f"{key},{value['period_start']},{value['period_end']},{value['age']}\n")
+        elif format == 'json':
+            serialized = serialize(file)
+            with open(DATE_DICT, 'w') as f:
+                json.dump(serialized, f, default=custom_serializer)
+        else:
+            raise ValueError("Unsupported format. Use 'csv' or 'json'.")
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
+
+       
+       
+       
+        
+    
+        
+        
+   
+   
     
 
 if __name__ == "__main__":
     # Example usage
-    start_date = date(2025, 4, 1)
-    end_date = date(2080, 7, 31)
-    birth_date = date(1974, 7, 6)
+    start_date = '1945-04-01'
+    end_date = '2080-07-31'
+    birth_date = '1945-04-19'
     dategen = DateGenerator(start_date, end_date, birth_date)
     date_dict = dategen.generate_date_dict()
-    dategen.save_file()  # Save the date_dict to file after generation
+   # dategen.save # Save the date_dict to file after generation
     for date_key, period_info in date_dict.items():
         print(f"Period {date_key}: Start: {period_info['period_start']}, End: {period_info['period_end']}, Age: {period_info['age']}")

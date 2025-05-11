@@ -3,14 +3,20 @@ import subprocess
 import json
 from cpf_config_loader_v8 import ConfigLoader
 import os
+from datetime import datetime, date
 
 PATH = os.path.dirname(os.path.abspath(__file__))  # Dynamically determine the src directory
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+FLAT_FILENAME = os.path.join(SRC_DIR, 'cpf_config_flat.json')  # Full path to the flat config file
+#DATABASE_NAME = os.path.join(SRC_DIR, 'cpf_simulation.db')  # Full path to the database file
+
 
 st.set_page_config(page_title="CPF Simulation Setup", layout="wide")
 st.title("🧾 CPF Simulation Configurator")
 
 # Load the configuration
-flat_config = ConfigLoader(os.path.join(PATH, "cpf_config_flat.json"))
+flat_config = ConfigLoader(FLAT_FILENAME)
 #
 # Display the flat dictionary in the Streamlit app
 st.subheader("🔧 Edit Parameters")
@@ -46,14 +52,17 @@ with col1:
         nested_config = unflatten_dict(updated_config)
 
         # Save the updated configuration back to the file
-        
-        flat_config.update
+        for k, v in nested_config.items():
+            if isinstance(v,(datetime, date)):
+                flat_config._config_data[k] = v.strftime("%Y-%m-%d")
+            else:  
+                flat_config._config_data[k]  = v
         st.success("Configuration saved successfully!")
         
 
 
         # Save the updated configuration to a file
-        with open(os.path.join(PATH, "cpf_config_flat_updated.json"), "w") as f:
+        with open(CONFIG_FILENAME, "w") as f:
             json.dump(nested_config, f, indent=4)
         st.success("Configuration saved successfully!")
     

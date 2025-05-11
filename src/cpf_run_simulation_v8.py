@@ -1,7 +1,7 @@
-from cpf_config_loader_v6 import ConfigLoader
-from cpf_program_v10 import CPFAccount
+from cpf_config_loader_v9 import ConfigLoader
+from cpf_program_v11 import CPFAccount
 from tqdm import tqdm  # For the progress bar
-from cpf_date_generator_v4 import DateGenerator
+from cpf_date_generator_v3 import DateGenerator
 import os
 import sqlite3
 import json
@@ -12,6 +12,8 @@ from dateutil.relativedelta import relativedelta
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
 CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
 DATABASE_NAME = os.path.join(SRC_DIR, 'cpf_simulation.db')  # Full path to the database file
+DATE_KEYS = ['start_date', 'end_date', 'birth_date']
+DATE_FORMAT = "%Y-%m-%d"
 
 # Load the configuration file
 config_loader = ConfigLoader(CONFIG_FILENAME)
@@ -39,7 +41,8 @@ def create_table(conn):
             ra_balance REAL,
             loan_balance REAL,
             excess_balance REAL,
-            cpf_payout REAL
+            cpf_payout REAL,
+            message TEXT
         );
         """
         cur = conn.cursor()
@@ -83,7 +86,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     end_date = config_loader.getdata('end_date', {})
     birth_date = config_loader.getdata('birth_date', {})
     brs_amount = config_loader.getdata('retirement_sums', {}).get('brs', {}).get('amount', 0.0)    
-   
+    
     # Validate that the dates are loaded correctly
     if not all([start_date, end_date, birth_date]):
         raise ValueError("Missing required date values in the configuration file. Please check 'start_date', 'end_date', and 'birth_date'.")
@@ -91,6 +94,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     # Step 2: Generate the date dictionary
     dategen = DateGenerator(start_date=start_date, end_date=end_date, birth_date=birth_date)
     date_dict = dategen.generate_date_dict()
+    dategen.save_file(dategen.date_list, format='csv')  # Save the date_dict to file after generation
     print(f"Generated date_dict with {len(date_dict)} entries.")
     if not date_dict:
         print("Error: date_dict is empty. Loop will not run.")
@@ -101,19 +105,25 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     # Step 4: Calculate CPF per month using CPFAccount
     with CPFAccount(config_loader) as cpf:
         # this method will update the cpf_config.json with the amounts needed in allocation.
-        #cpf.calculate_total_contributions()
+        cpf.start_date = cpf.convert_date_strings(key='start_date', date_str=start_date)
+        cpf.end_date = cpf.convert_date_strings(key='end_date', date_str=end_date)
+        cpf.birth_date = cpf.convert_date_strings(key='birth_date', date_str=birth_date)
+        cpf.current_date =  cpf.start_date
+        cpf.age = compute_age(cpf.start_date, cpf.birth_date)
+        cpf.date_key = cpf.current_date.strftime('%Y-%m')
+        
+        #step 1 before iteration starts.
         cpf.compute_and_add_allocation()
-        cpf.age = compute_age(start_date, birth_date)
-        cpf.current_date = start_date
+        #step 2 print the headers
         print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
         print("-" * 150)
 
-
+        #step 3 determine if inital balance is needed.
         if is_initial:
             print("Loading initial balances from config...")
             # Use property setters to ensure logging                                                                                                            
-               
-            cpf.date_key = date_dict.get('2025-05-01', {}).get('period_end', None)
+            #step 4 set the initial balances
+           
             initoa_balance = float(cpf.config.getdata('oa_balance', 0.0))
             initsa_balance = float(cpf.config.getdata('sa_balance', 0.0))
             initma_balance = float(cpf.config.getdata('ma_balance', 0.0))
@@ -125,7 +135,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                 cpf.record_inflow(account=account, amount=new_balance, message=f"Initial Balance of {account}")
             is_initial = False
             
-       #  calculate loan payments 
+       #  get loan payments from config
         loan_paymenty1 = float(cpf.config.getdata(['loan_payments','year_1_2'], 0.0))         
         loan_paymenty3 = float(cpf.config.getdata(['loan_payments','year_3'], 0.0))
         loan_paymenty4 = float(cpf.config.getdata(['loan_payments','year_4_beyond'], 0.0))     
@@ -140,24 +150,31 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
            # for date_key in date_dict:
            
                 cpf.date_key = date_key
-                cpf.age = date_info['age']
-                setattr(cpf,'age',cpf.age)
+                cpf.age = compute_age(cpf.current_date, cpf.birth_date)
+              
                 cpf.current_date = date_info['period_end']
                 
                 # loan payments
                 
                 if year == 1 and cpf._loan_balance > 0:
-                    cpf.record_outflow(account='oa', amount=loan_paymenty1, message="Loan payment from OA Account at year 1")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment from OA Account at year 1")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty1, message=f"Loan payment from OA Account at year 1 age {cpf.age}")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message=f"Loan payment from OA Account at year 1 age {cpf.age}")
                 elif year == 2 and cpf._loan_balance > 0:
-                    cpf.record_outflow(account='oa', amount=loan_paymenty1, message="Loan payment from OA Account at year 2")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message="Loan payment from OA Account at year 2")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty1, message=f"Loan payment from OA Account at year 2 age {cpf.age}")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty1, message=f"Loan payment from OA Account at year 2 age {cpf.age}")
                 elif year == 3 and cpf._loan_balance > 0:
-                    cpf.record_outflow(account='oa', amount=loan_paymenty3, message="Loan payment from OA Account at year 3")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty3, message="Loan payment from OA Account at year 3")
+                    cpf.record_outflow(account='oa', amount=loan_paymenty3, message=f"Loan payment from OA Account at year 3 age {cpf.age}")
+                    cpf.record_outflow(account='loan', amount=loan_paymenty3, message=f"Loan payment from OA Account at year 3 age {cpf.age}")
                 elif year >= 4 and cpf._loan_balance > 0:
-                    cpf.record_outflow(account='oa', amount=loan_paymenty4, message=f"Loan payment from OA Account at year 4, age {cpf.age}")
-                    cpf.record_outflow(account='loan', amount=loan_paymenty4, message=f"Loan payment from OA Account at year 4, age {cpf.age}")
+                   
+                    if cpf._loan_balance > 0:
+                        loan_payment = min(loan_paymenty4, cpf._loan_balance)
+                        cpf.record_outflow(account='oa', amount=loan_payment, message=f"Loan payment from OA Account at year 4, age {cpf.age}")
+                        cpf.record_outflow(account='loan', amount=loan_payment, message=f"Loan payment from OA Account at year 4, age {cpf.age}")
+                    elif cpf._loan_balance < 3000:
+                        loan_payment = min(loan_paymenty4, cpf._loan_balance)
+                    else:
+                        cpf.loan_balance = 0.0
                 year += 1
                 # Increment the year counter           
                 if cpf.age < 55:    
@@ -165,7 +182,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     cpf.record_inflow(account='sa', amount=dicct['allocation_below_55']['sa']['amount'], message=f"Allocation for SA at age {cpf.age}")
                     cpf.record_inflow(account='ma', amount=dicct['allocation_below_55']['ma']['amount'], message=f"Allocation for MA at age {cpf.age}")
 
-                elif cpf.age == 55 and cpf.current_date.month == 7 and cpf.current_date.year  == 2029:
+                elif cpf.age == 55 and cpf.current_date.month == cpf.birth_date.month :
                           
                     cpf.record_inflow(account='oa', amount=dicct['allocation_below_55']['oa']['amount'], message=f"Allocation for OA at age {cpf.age}")
                     cpf.record_inflow(account='sa', amount=dicct['allocation_below_55']['sa']['amount'], message=f"Allocation for SA at age {cpf.age}")
@@ -229,12 +246,13 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     cpf.record_inflow(account='ra', amount=ra_extra_interest, message=f"Extra Interest for {account} at age {cpf.age}")                                                                                                
 
                 # CPF payout calculation
-                cpf_payout = 0.0
+                
                 if hasattr(cpf, 'calculate_cpf_payout'):
                     payout_result = cpf.calculate_cpf_payout()
                     if isinstance(payout_result, (int, float)):
-                        cpf_payout = payout_result
-                        cpf.record_inflow('excess', cpf_payout, f"cpf_payout_{cpf.age}")
+                        cpf.payout = payout_result
+                        cpf.record_inflow('excess', cpf.payout, f"cpf_payout_{cpf.age}")
+                       
 
 
 
@@ -246,22 +264,24 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                 ra_bal = getattr(cpf, '_ra_balance', 0.0).__round__(2)
                 loan_bal = getattr(cpf, '_loan_balance', 0.0).__round__(2)
                 excess_bal = getattr(cpf, '_excess_balance', 0.0).__round__(2)
+                payout = getattr(cpf, 'payout', 0.0).__round__(2)
                # display_ra = f"{'closed':<15}" if cpf._sa_balance == 0.0 else f'{float(sa_bal):<15,.2f}'
                 print(f"{date_key:<15}{cpf.age:<5}"
                       f"{float(oa_bal):<15,.2f}{float(sa_bal):<15,.2f}"
                       f"{float(ma_bal):<15,.2f}{float(ra_bal):<15,.2f}"
                       f"{float(loan_bal):<12,.2f}{float(excess_bal):<12,.2f}"
-                      f"{float(cpf_payout):<12,.2f}")
+                      f"{float(cpf.payout):<12,.2f}")
                 
                 
                 
 
-                if cpf.age == 55 and cpf.current_date.month == 7:
+                if cpf.age == 55 and cpf.current_date.month == cpf.birth_date.month :
                     is_display_special_july = True
                     orig_oa_bal = oa_bal
                     orig_sa_bal = sa_bal
                     orig_ma_bal = ma_bal
                     orig_loan_bal = loan_bal
+                    orig_cpf_payout = payout
                 
                                           
                 if is_display_special_july:    
@@ -270,10 +290,10 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     display_oa_bal = -orig_oa_bal
                     display_sa_bal = -orig_sa_bal
                     display_ma_bal = orig_ma_bal
-                    display_loan_bal = -orig_loan_bal               
-                    display_ra_bal =  (orig_oa_bal + orig_sa_bal - orig_loan_bal)
+                    display_loan_bal = -orig_loan_bal if loan_bal > 0 else 0.0             
+                    display_ra_bal =  brs_amount
                     display_excess_bal = (orig_oa_bal + orig_sa_bal - orig_loan_bal - brs_amount)
-                    display_cpf_payout = 0.0
+                    display_cpf_payout = orig_cpf_payout
                     ##                                   
                     print(f"{display_date_key:<15}{cpf.age:<4}"
                           f"{float(display_oa_bal):<15,.2f}{display_sa_bal:<15,.2f}"
@@ -288,8 +308,19 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                     cpf.record_inflow(account= 'excess',amount= display_excess_bal,message= f"transfer_cpf_age={cpf.age}")
                     is_display_special_july = False   
                 # Insert data into the database for every iteration
-                cpf.insert_data(conn, date_key, cpf.age, oa_bal, sa_bal, ma_bal, ra_bal, loan_bal, excess_bal, cpf_payout)
-
+                if cpf.age == 55 :
+                    cpf.message = f"Age 55 - Special case for CPF payout"
+                elif cpf._ra_balance == 0.0 and cpf.age >= 55:
+                    cpf.message = f"Age {cpf.age} - RA balance is zero"
+                elif  cpf.age == 67:
+                    cpf.message = f"Age {cpf.age} - CPF payout"
+                elif cpf.current_date.month == 12:
+                    cpf.message = f"End of year {cpf.age} - CPF Interest"
+                else :
+                    cpf.message = f"Age {cpf.age} - Regular CPF calculation" 
+                if not is_display_special_july:
+                    cpf.insert_data(conn, str(date_key), int(cpf.age), float(oa_bal), float(sa_bal), float(ma_bal), float(ra_bal), float(loan_bal), float(excess_bal), float(payout),str(cpf.message))
+                    a=0
             # Pass birth_date as a string
            # display_data_from_db()  # Remove the argument
     #this transforms the logs from json to csv.
@@ -329,7 +360,7 @@ def display_data_from_db():
 
     # Query the database for all monthly data within the specified range
     sql = f"""
-        SELECT date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout
+        SELECT date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout, message
         FROM cpf_data
         WHERE date_key BETWEEN '{start_date}' AND '{end_date}'
         ORDER BY date_key;  -- Ensure all months are retrieved

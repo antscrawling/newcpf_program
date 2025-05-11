@@ -6,40 +6,18 @@ import pandas as pd
 import csv
 from datetime import datetime
 from typing import Any, Union, List
+import os
 
-def save_results(data: Union[dict, List], file_path: str, format: str = None):
-    """
-    Save the results data to file in the specified format: 'pickle' (binary), 'json', 'shelve', or 'csv'.
-    """
-    format = format.lower()
-    if format == 'pickle':
-        with open(file_path, 'wb') as f:
-            pickle.dump(data, f)
-    elif format == 'json':
-        with open(file_path, 'w') as f:
-            json.dump(data, f, default=str, indent=4)
-    elif format == 'shelve':
-        # Save each item in a shelve DB (useful for incremental storage)
-        with shelve.open(file_path, flag='n') as db:
-            if isinstance(data, list):
-                for idx, item in enumerate(data):
-                    db[str(idx)] = item
-            elif isinstance(data, dict):
-                for key, item in data.items():
-                    db[str(key)] = item
-            else:
-                db['data'] = data
-    elif format == 'csv':
-        # Save list of dictionaries as a CSV file
-        if isinstance(data, list) and all(isinstance(item, dict) for item in data):
-            with open(file_path, 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=data[0].keys())
-                writer.writeheader()
-                writer.writerows(data)
-        else:
-            raise ValueError("Data must be a list of dictionaries to save as CSV.")
-    else:
-        raise ValueError(f"Unknown format: {format}")
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
+CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
+LOG_FILE_PATH = os.path.join(SRC_DIR, "cpf_log_file.csv")  # Log file path inside src folder
+
+def custom_serializer(obj):
+    """Custom serializer for non-serializable objects like datetime."""
+    if isinstance(obj, datetime):
+        return obj.strftime("%Y-%m-%d %H:%M:%S")
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 
 class DataSaver:
     """
@@ -81,87 +59,112 @@ class DataSaver:
                 self._csv_writer.writerow(item)
             else:
                 raise ValueError("Item must be a dictionary for CSV format.")
+            
+    def save_results(self,data: Union[dict, List], file_path: str, format: str = None):
+        """
+        Save the results data to file in the specified format: 'pickle' (binary), 'json', 'shelve', or 'csv'.
+        """
+        longfile = os.path.join(SRC_DIR, file_path)
+        format = format.lower()
+        if format == 'pickle':
+            with open(longfile, 'wb') as f:
+                pickle.dump(data, f)
+        elif format == 'json':
+            with open(longfile, 'w') as f:
+                json.dump(data, f, indent=4,default=custom_serializer)
+        elif format == 'shelve':
+            # Save each item in a shelve DB (useful for incremental storage)
+            with shelve.open(longfile, flag='n') as db:
+                if isinstance(data, list):
+                    for idx, item in enumerate(data):
+                        db[str(idx)] = item
+                elif isinstance(data, dict):
+                    for key, item in data.items():
+                        db[str(key)] = item
+                else:
+                    db['data'] = data
+        elif format == 'csv':
+            # Save list of dictionaries as a CSV file
+            if isinstance(data, list) and all(isinstance(item, dict) for item in data):
+                with open(longfile, 'w', newline='') as f:
+                    fieldnames = ['date_key', 'period_start','period_end','age']
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(data)
+            else:
+                raise ValueError("Data must be a list of dictionaries to save as CSV.")
+        else:
+            raise ValueError(f"Unknown format: {format}")
+    
 
     def close(self):
         """Finalize and close the storage, writing any accumulated data for JSON."""
         if self.format == 'pickle':
             self._file.close()
         elif self.format == 'json':
-            with open('cpf_logs.json', 'w') as f:
-                json.dump(self._data_list, f, default=str, indent=4)
+            with open(CONFIG_FILENAME, 'w') as f:
+                json.dump(self._data_list, f, indent=4,default=custom_serializer)
         elif self.format == 'shelve':
             self._shelf.close()
         elif self.format == 'csv':
             self._file.close()
         self._data_list = []
 
-    def build_report(self, output_format="csv"):
-        """
-        Build a report from the logs and save it as a CSV or Excel file.
-        :param output_format: The format to save the report ("csv" or "excel").
-        """
-        report_data = []
+    #def build_report(self, output_format="csv"):
+    #    """
+    #    Build a report from the logs and save it as a CSV or Excel file.
+    #    :param output_format: The format to save the report ("csv" or "excel").
+    #    """
+    #    report_data = []
+#
+#
 
-        # Ensure logs are loaded
-        if self.logs is None or self.logs.empty:
-            raise ValueError("Logs data is empty or not loaded.")
 
-        for _, log in self.logs.iterrows():
-            # Extract log details
-            date_str = log["date"]
-            try:
-                # Try parsing as full datetime
-                self.xdate = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").date()
-            except ValueError:
-                try:
-                    # Try parsing as year-month
-                    self.xdate = datetime.strptime(date_str, "%Y-%m").date()
-                except ValueError:
-                    raise ValueError(f"Invalid date format: {date_str}")
 
-            # Update the age for the current log entry
-            self.age = self.calculate_age()
 
-            self.flow_type = log["type"]
-            self.message = log["message"]
 
-            account = log["account"]
-            amount = log["amount"]
 
-            if self.flow_type == "inflow":
-                self.record_inflow(account, amount, self.message)
-            elif self.flow_type == "outflow":
-                self.record_outflow(account, amount, self.message)
 
-            # Extract year-month for the DATE_KEY
-            date_key = self.xdate.strftime("%Y-%m")
 
-            # Append the row to the report data
-            report_data.append({
-                "DATE_KEY": date_key,
-                "AGE": self.age,
-                "INFLOW": self.inflow,
-                "OUTFLOW": self.outflow,
-                "OA": self.oa_balance,
-                "SA": self.sa_balance,
-                "MA": self.ma_balance,
-                "RA": self.ra_balance,
-                "LOANS": self.loan_balance,
-                "EXCESS": self.excess_balance,
-                "TYPE": self.flow_type,
-                "MESSAGE": self.message
-            })
 
-        # Convert the report data to a DataFrame
-        df = pd.DataFrame(report_data)
 
-        # Save the report as CSV or Excel
-        output_file = f"cpf_report.{output_format}"
-        if output_format == "csv":
-            df.to_csv(output_file, index=False)
-        elif output_format == "excel":
-            df.to_excel(output_file, index=False, engine="openpyxl")
-        else:
-            raise ValueError("Invalid output format. Use 'csv' or 'excel'.")
 
-        print(f"Report saved as {output_file}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
