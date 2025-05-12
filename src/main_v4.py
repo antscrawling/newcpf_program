@@ -124,14 +124,15 @@ with col5:
     st.download_button(
         label="Download XML",
         data=xml,
-        file_name="cpf_config.xml",
+        file_name="cpf_report.xml",
         mime="application/xml",
         )
     
 with col6:
     if st.button(" EXIT "):
-        # Export the updated configuration as a CSV file
-        st.stop()
+        # Forcefully exit the Streamlit app
+        st.write("Exiting the application...")
+        os._exit(0)
 
 
 
