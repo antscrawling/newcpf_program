@@ -2,7 +2,7 @@ import atexit
 from datetime import datetime
 import csv
 import json
-from src.xcpf_config_loader_v9 import ConfigLoader
+from cpf_config_loader_v9 import ConfigLoader
 from cpf_data_saver_v3 import DataSaver  # Import DataSaver class
 from multiprocessing import Process, Queue
 import sqlite3
