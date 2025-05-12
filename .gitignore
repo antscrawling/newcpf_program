@@ -20,3 +20,7 @@ src/__pycache__/cpf_data_saver_v3.cpython-313.pyc
 src/__pycache__/cpf_program_v9.cpython-313.pyc
 src/__pycache__/cpf_program_v10.cpython-313.pyc
 src/__pycache__/cpf_program_v10.cpython-313.pyc
+src/cpf_config_flat_updated.json
+.gitignore
+src/cpf_report (1).xml
+src/cpf_config_flat_updated.json
