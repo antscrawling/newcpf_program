@@ -1,7 +1,7 @@
 from cpf_config_loader_v4 import ConfigLoader
 from cpf_program_v10 import CPFAccount
 from tqdm import tqdm  # For the progress bar
-from cpf_date_generator_v4 import DateGenerator
+from cpf_date_generator_v3 import DateGenerator
 import os
 import sqlite3
 #from pydantic import BaseModel  # Import BaseModel
@@ -83,7 +83,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     start_date = config_loader.getdata('start_date', {})
     end_date = config_loader.getdata('end_date', {})
     birth_date = config_loader.getdata('birth_date', {})
-    brs_amount = config_loader.getdata('retirement_sums', {}).get('brs', {}).get('amount', 0.0)    
+    brs_amount = config_loader.getdata(['retirement_sums','brs','amount'], {})
    
     # Validate that the dates are loaded correctly
     if not all([start_date, end_date, birth_date]):

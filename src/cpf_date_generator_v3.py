@@ -5,6 +5,7 @@ from calendar import monthrange
 from cpf_data_saver_v3 import DataSaver
 import os
 import json,csv
+from typing import Any
 
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
 CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the config file
@@ -48,6 +49,7 @@ class DateGenerator(object):
         self.start_date = self.convert_date_strings('start_date', start_date)
         self.end_date = self.convert_date_strings('end_date', end_date)
         self.birth_date = self.convert_date_strings('birth_date', birth_date)
+        self.data = None
         self.date_dict = {}
         self.date_list = []
 
@@ -65,7 +67,26 @@ class DateGenerator(object):
             return date_str
         else:
             raise ValueError(f"Invalid date format for {key}: {date_str}. Expected format: YYYY-MM-DD")
-            
+    
+    def get_data(self,   keys : Any ):
+        """
+        Get data from the date_dict based on the provided keys.
+        """
+        if isinstance(keys, str):
+            keys = [keys]
+        elif isinstance(keys, list):
+            keys = keys
+        else:
+            raise TypeError("keys must be a string or a list of strings")
+        
+        data = {}
+        for key in keys:
+            if key in self.date_dict:
+                data[key] = self.date_dict[key]
+            else:
+                raise KeyError(f"Key {key} not found in date_dict")
+        return data     
+    
     def generate_date_dict(self):
         """
         Generates a dictionary of dates with start/end of month and age.
@@ -126,7 +147,7 @@ class DateGenerator(object):
             current_date = current_date + relativedelta(months=1)
             print(f'Procfessing Date Dictionary key = {date_key}, {age_at_period_end}')  # Debugging line to print each entry
            # self.save_file('date_dict', format='pickle')  # Save the date_dict to file after each entry
-    
+            self.data = self.date_dict
         return self.date_dict
     
 #    def convert_dates_to_datetime(self, date_str):

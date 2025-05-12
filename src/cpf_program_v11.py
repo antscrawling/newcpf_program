@@ -8,6 +8,7 @@ from multiprocessing import Process, Queue
 import sqlite3
 import os
 from datetime import date, datetime
+from itertools import count
 
 # Dynamically determine the src directory
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
@@ -28,6 +29,7 @@ def _save_log_worker(queue, filename):
             f,
             fieldnames=[
                 "date",
+                "transaction_reference",
                 "age",  # Include 'age' in the fieldnames
                 "account",
                 "old_balance",
@@ -76,7 +78,12 @@ class CPFAccount:
         self._ra_balance = 0.0
         self._excess_balance = 0.0
         self._loan_balance = 0.0
-
+        self.start_reference = 100000000        
+        self.counter = count(1)
+        self.trandaction_reference = 0
+        self.dbcounter = count(1)
+        self.dbreference = 0
+        
         # Log saving setup
         self.log_queue = Queue()
         self.log_process = Process(
@@ -89,7 +96,15 @@ class CPFAccount:
 
         # Register cleanup function
         atexit.register(self.close_log_writer)
-
+        
+    def add_db_reference(self):
+        self.dbreference = self.start_reference + next(self.dbcounter)
+        return self.dbreference
+    
+    def add_transaction_reference(self):
+        self.trandaction_reference = self.start_reference + next(self.counter)
+        return self.trandaction_reference
+        
     def save_log_to_file(self, log_entry):
         """Send log entry to the worker process."""
         if self.log_process.is_alive():
@@ -120,6 +135,7 @@ class CPFAccount:
         # loglist_entry.append()
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "oa",
             "old_balance": self._oa_balance.__round__(2),
@@ -151,6 +167,7 @@ class CPFAccount:
         log_entry = {
             # Ensure current_date is set before logging
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "sa",  # Add account identifier
             "old_balance": self._sa_balance.__round__(2),
@@ -179,6 +196,7 @@ class CPFAccount:
         diff = value - self._ma_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "ma",
             "old_balance": self._ma_balance.__round__(2),
@@ -204,6 +222,7 @@ class CPFAccount:
         diff = value - self._ra_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "ra",
             "old_balance": self._ra_balance.__round__(2),
@@ -229,6 +248,7 @@ class CPFAccount:
         diff = value - self._excess_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "excess",
             "old_balance": self._excess_balance.__round__(2),
@@ -254,6 +274,7 @@ class CPFAccount:
         diff = value - self._loan_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "loan",
             "old_balance": self._loan_balance.__round__(2),
@@ -284,6 +305,7 @@ class CPFAccount:
         diff = value - self._combined_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "combined",
             "old_balance": self._combined_balance.__round__(2),
@@ -320,6 +342,7 @@ class CPFAccount:
         diff = value - self._combinedbelow55_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "combined_below_55",
             "old_balance": self._combinedbelow55_balance.__round__(2),
@@ -356,6 +379,7 @@ class CPFAccount:
         diff = value - self._combinedabove55_balance
         log_entry = {
             "date": self.current_date.strftime("%Y-%m-%d"),
+            "transaction_reference" : self.add_transaction_reference(),
             "age": self.age,
             "account": "combined_above_55",
             "old_balance": self._combinedabove55_balance.__round__(2),
@@ -456,6 +480,7 @@ class CPFAccount:
         self,
         conn,
         date_key,
+        dbreference,
         age,
         _oa_balance,
         _sa_balance,
@@ -470,12 +495,13 @@ class CPFAccount:
         try:
             sql = """
                 INSERT OR REPLACE INTO cpf_data (
-                    date_key, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout, message
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    date_key, dbreference, age, oa_balance, sa_balance, ma_balance, ra_balance, loan_balance, excess_balance, cpf_payout, message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
             cur = conn.cursor()
             cur.execute(sql, (
                 date_key,
+                dbreference,
                 age,
                 _oa_balance,
                 _sa_balance,
@@ -823,15 +849,15 @@ class CPFAccount:
         # return self.total_contribution
         setattr(self, "total_contribution", self.total_contribution)
 
-    def calculate_cpf_payout(self) -> float:
+    def calculate_cpf_payout(self,types:str) -> float:
         """Calculates the CPF payout amount based on age and retirement sum.
         only starts at the age of 67
         """
-        payout_age = self.config.getdata(["cpf_payout_age"], 65)
-        brs_payout = self.config.getdata(["retirement_sums", "brs", "payout"], 0.0)
+        payout_age = self.config.getdata(["cpf_payout_age"], 67)
+        payout = self.config.getdata(["retirement_sums", types, "payout"], 0.0)
 
         if self.age >= payout_age:
-            self.payout = brs_payout
+            self.payout = payout
             return self.payout
         else:
             return 0.0  # No payout before payout age

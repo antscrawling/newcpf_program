@@ -4,6 +4,7 @@ import json
 from cpf_config_loader_v8 import ConfigLoader
 import os
 from datetime import datetime, date
+import sys
 
 PATH = os.path.dirname(os.path.abspath(__file__))  # Dynamically determine the src directory
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
@@ -68,26 +69,54 @@ with col1:
     
 with col2:
     if st.button("Run Simulation"):
-        result = subprocess.run(["python", os.path.join(PATH, "cpf_run_simulation_v8.py")], check=True, capture_output=True, text=True)
-    with open(os.path.join(PATH, "cpf_config_flat_updated.json"), "w") as f:
-        json.dump(updated_config, f, indent=4)
-    st.success("Configuration saved successfully!")
-    
-    
+        # Use the full path to the Python executable
+        python_executable = sys.executable  # This gets the current Python executable being used
+
+        # Run the simulation script
+        try:
+            result = subprocess.run(
+                [python_executable, os.path.join(PATH, "cpf_run_simulation_v8.py")],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            st.success("Simulation completed!")
+            st.code(result.stdout)
+        except subprocess.CalledProcessError as e:
+            st.error("Simulation failed:")
+            st.code(e.stderr or str(e))
+
 with col3:
-   if st.button("🚀 Run CSV report"):
-       # Run the simulation script
-       try:
-           result = subprocess.run(["python", os.path.join(PATH, "ccpf_build_reports_v1.py")], check=True, capture_output=True, text=True)
-           st.success("Simulation completed!")
-           st.code(result.stdout)
-       except subprocess.CalledProcessError as e:
-           st.error("Simulation failed:")
-           st.code(e.stderr or str(e))
-           
+    if st.button("🚀 Run CSV Report"):
+        # Run the report generation script
+        try:
+            result = subprocess.run(
+                [python_executable, os.path.join(PATH, "ccpf_build_reports_v1.py")],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            st.success("CSV Report generated successfully!")
+            st.code(result.stdout)
+        except subprocess.CalledProcessError as e:
+            st.error("CSV Report generation failed:")
+            st.code(e.stderr or str(e))
+
 with col4:
-    if st.button("🧹 Clear"):
-        st.experimental_rerun()
+    if st.button("📊 Run Analysis"):
+        # Run the analysis script
+        try:
+            result = subprocess.run(
+                [python_executable, os.path.join(PATH, "cpf_analysis_v1.py")],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            st.success("Analysis completed successfully!")
+            st.code(result.stdout)
+        except subprocess.CalledProcessError as e:
+            st.error("Analysis failed:")
+            st.code(e.stderr or str(e))
         
 with col5:
     import dicttoxml

@@ -14,6 +14,7 @@ class CPFLogEntry:
         self.csv_file_path = csv_file_path
         self.logs = None
         self.xdate: datetime.date = None
+        self.reference : int = 0
         self.age: int = 0
         self.oa_balance: float = 0.0
         self.sa_balance: float = 0.0
@@ -113,6 +114,7 @@ class CPFLogEntry:
             # Extract log details
             date_str = log["date"]
             self.xdate = datetime.strptime(date_str, "%Y-%m-%d").date()
+            self.reference = log["transaction_reference"]
             #try:
             #    # Parse the date into YYYY-MM format
             #    if len(date_str) == 7:  # Format: YYYY-MM
@@ -156,17 +158,18 @@ class CPFLogEntry:
             # Append the row to the report data, rounding amounts to 2 decimal places
             report_data.append({
                 "DATE_KEY": self.xdate ,
+                "REF": self.reference,
                 "AGE": self.age,
                 "ACCOUNT": account,
                 "TYPE": self.flow_type,
-                "INFLOW": amount if self.flow_type == "inflow" else 0,
-                "OUTFLOW": amount if self.flow_type == "outflow" else 0,
-                "OA": getattr(self,f'{account}_balance') ,  
-                "SA": getattr(self,f'{account}_balance') ,  
-                "MA": getattr(self,f'{account}_balance') ,  
-                "RA": getattr(self,f'{account}_balance') ,  
-                "LOANS":  getattr(self,f'{account}_balance') ,  
-                "EXCESS": getattr(self,f'{account}_balance') ,
+                "INFLOW": amount.__round__(2) if self.flow_type == "inflow" else 0,
+                "OUTFLOW": amount.__round__(2) if self.flow_type == "outflow" else 0,
+                "OA": getattr(self,f'{account}_balance').__round__(2) ,  
+                "SA": getattr(self,f'{account}_balance').__round__(2) ,  
+                "MA": getattr(self,f'{account}_balance').__round__(2) ,  
+                "RA": getattr(self,f'{account}_balance').__round__(2) ,  
+                "LOANS":  getattr(self,f'{account}_balance').__round__(2) ,  
+                "EXCESS": getattr(self,f'{account}_balance').__round__(2) ,
                 "MESSAGE": self.message
             })
 
