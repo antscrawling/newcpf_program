@@ -1,4 +1,4 @@
-from cpf_config_loader_v9 import ConfigLoader
+from src.xcpf_config_loader_v9 import ConfigLoader
 from cpf_program_v11 import CPFAccount
 from tqdm import tqdm  # For the progress bar
 from cpf_date_generator_v3 import DateGenerator

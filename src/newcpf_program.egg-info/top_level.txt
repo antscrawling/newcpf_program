@@ -1,5 +1,5 @@
 __init__
-cpf_analysis
+cpf_analysis_v1
 cpf_build_reports_v1
 cpf_config_loader_v4
 cpf_config_loader_v5

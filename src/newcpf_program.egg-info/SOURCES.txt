@@ -2,7 +2,7 @@ LICENSE
 README.md
 pyproject.toml
 src/__init__.py
-src/cpf_analysis.py
+src/cpf_analysis_v1.py
 src/cpf_build_reports_v1.py
 src/cpf_config_loader_v4.py
 src/cpf_config_loader_v5.py
