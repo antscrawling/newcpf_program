@@ -214,7 +214,7 @@ class ConfigLoader:
 
 if __name__ == "__main__":
     # Initialize the ConfigLoader
-    config_loader = ConfigLoader(config_filename='test_config1.json')
+    config_loader = ConfigLoader(config_filename='cpf_config.json')
 
     # Retrieve the entire configuration
    #entire_config = config_loader.getdata()
@@ -223,3 +223,6 @@ if __name__ == "__main__":
     # Retrieve a specific value
     specific_value = config_loader.getdata(keys=["oa_allocation_below_55", "allocation"])
     pprint( specific_value)
+    
+    all = config_loader.getdata()
+    pprint(all)

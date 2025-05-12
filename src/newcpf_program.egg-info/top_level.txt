@@ -1,6 +1,7 @@
 __init__
 cpf_analysis_v1
 cpf_build_reports_v1
+cpf_config_loader_v10
 cpf_config_loader_v4
 cpf_config_loader_v5
 cpf_config_loader_v6
@@ -18,4 +19,5 @@ cpf_run_simulation_v8
 main_v2
 main_v3
 main_v4
+main_v5
 test
