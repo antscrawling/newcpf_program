@@ -1,4 +1,4 @@
-from cpf_config_loader_v9 import ConfigLoader
+from cpf_config_loader_v10 import ConfigLoader
 from cpf_program_v11 import CPFAccount
 from tqdm import tqdm  # For the progress bar
 from cpf_date_generator_v3 import DateGenerator
@@ -67,12 +67,7 @@ def compute_age(start_date : datetime.date, birth_date : datetime.date) -> int:
     #if start_date.month >= birth_date.month:
     #    base_age += 1
     return  base_age
-
-
-    
-    
-    
-    
+                
                 
 def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     # Step 1: Load the configuration
@@ -97,7 +92,7 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
     dategen = DateGenerator(start_date=start_date, end_date=end_date, birth_date=birth_date)
     date_dict = dategen.generate_date_dict()
     dategen.save_file(dategen.date_list, format='csv')  # Save the date_dict to file after generation
-    print(f"Generated date_dict with {len(date_dict)} entries.")
+   # print(f"Generated date_dict with {len(date_dict)} entries.")
     if not date_dict:
         print("Error: date_dict is empty. Loop will not run.")
         return  # Exit if empty
@@ -116,6 +111,24 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
         
         #step 1 before iteration starts.
         cpf.compute_and_add_allocation()
+        #print headers
+        # Violet color ANSI escape code
+        violet = "\033[35m"
+        reset = "\033[0m"  # Reset color to default
+
+        print(f"{violet}{'Simulation of CPF Data':^150}{reset}")
+        print(f"{violet}====================================={reset}")
+        print(f"{violet}== Start Date: {cpf.start_date}{reset}")
+        print(f"{violet}== End Date: {cpf.end_date}{reset}")
+        print(f"{violet}== Birth Date: {cpf.birth_date}{reset}")
+        print(f"{violet}== Age: {cpf.age}{reset}")
+        print(f"{violet}== Retirement Amount: {retirement_amount}{reset}")
+        print(f"{violet}== OA Balance Amount: {oa_bal}{reset}")
+        print(f"{violet}== SA Balance Amount: {sa_bal}{reset}")
+        print(f"{violet}== MA Balance Amount: {ma_bal}{reset}")
+        print(f"{violet}== Loan Balance Amount: {loan_bal}{reset}")
+        print(f"{violet}======================================{reset}")
+        print(f"{violet}{'-' * 150}{reset}")
         #step 2 print the headers
         print(f"{'Month and Year':<15}{'Age':<5}{'OA Balance':<15}{'SA Balance':<15}{'MA Balance':<15}{'RA Balance':<15}{'Loan Amount':<12}{'Excess Cash':<12}{'CPF Payout':<12}")
         print("-" * 150)
@@ -371,7 +384,7 @@ if __name__ == "__main__":
     # Load the configuration data
     config_loader.data  = config_loader.getdata()
     # Extract keys and values from the configuration data
-    keys, values = config_loader.extract_keys_and_values()
+    keys, values = config_loader.get_keys_and_values()
     
     # Create a dictionary to hold the allocation data
     allocation_data = {
@@ -469,4 +482,3 @@ if __name__ == "__main__":
 
 
 
-  

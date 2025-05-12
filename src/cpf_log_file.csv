@@ -1,0 +1,68 @@
+date,transaction_reference,age,account,old_balance,new_balance,amount,type,message
+2025-05-01,100000001,50,oa,0.0,167892.11,167892.11,inflow,oa-Initial Balance of oa-167892.11
+2025-05-01,100000002,50,sa,0.0,253163.35,253163.35,inflow,sa-Initial Balance of sa-253163.35
+2025-05-01,100000003,50,ma,0.0,72952.37,72952.37,inflow,ma-Initial Balance of ma-72952.37
+2025-05-01,100000004,50,loan,0.0,251101.0,251101.0,inflow,loan-Initial Balance of loan-251101.00
+2025-05-31,100000005,50,oa,167892.11,166204.72,-1687.39,outflow,oa-Loan payment from OA Account at year 1 age 50--1687.39
+2025-05-31,100000006,50,loan,251101.0,249413.61,-1687.39,outflow,loan-Loan payment from OA Account at year 1 age 50--1687.39
+2025-06-30,100000007,50,oa,166204.72,164517.33,-1687.39,outflow,oa-Loan payment from OA Account at year 2 age 50--1687.39
+2025-06-30,100000008,50,loan,249413.61,247726.22,-1687.39,outflow,loan-Loan payment from OA Account at year 2 age 50--1687.39
+2025-07-31,100000009,51,oa,164517.33,154517.34,-9999.99,outflow,oa-Loan payment from OA Account at year 3 age 51--9999.99
+2025-07-31,100000010,51,loan,247726.22,237726.23,-9999.99,outflow,loan-Loan payment from OA Account at year 3 age 51--9999.99
+2025-08-31,100000011,51,oa,154517.34,152699.85,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-08-31,100000012,51,loan,237726.23,235908.74,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-09-30,100000013,51,oa,152699.85,150882.36,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-09-30,100000014,51,loan,235908.74,234091.25,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-10-31,100000015,51,oa,150882.36,149064.87,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-10-31,100000016,51,loan,234091.25,232273.76,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-11-30,100000017,51,oa,149064.87,147247.38,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-11-30,100000018,51,loan,232273.76,230456.27,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-12-31,100000019,51,oa,147247.38,145429.89,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-12-31,100000020,51,loan,230456.27,228638.78,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2025-12-31,100000021,51,oa,145429.89,145732.87,302.98,inflow,oa-Interest for ra at age 51-302.98
+2025-12-31,100000022,51,sa,253163.35,254007.23,843.88,inflow,sa-Interest for ra at age 51-843.88
+2025-12-31,100000023,51,ma,72952.37,73195.54,243.17,inflow,ma-Interest for ra at age 51-243.17
+2025-12-31,100000024,51,sa,254007.23,254057.23,50.0,inflow,sa-Extra Interest for ra at age 51-50.00
+2026-01-31,100000025,51,oa,145732.87,143915.38,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-01-31,100000026,51,loan,228638.78,226821.29,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-02-28,100000027,51,oa,143915.38,142097.89,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-02-28,100000028,51,loan,226821.29,225003.8,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-03-31,100000029,51,oa,142097.89,140280.4,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-03-31,100000030,51,loan,225003.8,223186.31,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-04-30,100000031,51,oa,140280.4,138462.91,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-04-30,100000032,51,loan,223186.31,221368.82,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-05-31,100000033,51,oa,138462.91,136645.42,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-05-31,100000034,51,loan,221368.82,219551.33,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-06-30,100000035,51,oa,136645.42,134827.93,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-06-30,100000036,51,loan,219551.33,217733.84,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 51--1817.49"
+2026-07-31,100000037,52,oa,134827.93,133010.44,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-07-31,100000038,52,loan,217733.84,215916.35,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-08-31,100000039,52,oa,133010.44,131192.95,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-08-31,100000040,52,loan,215916.35,214098.86,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-09-30,100000041,52,oa,131192.95,129375.46,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-09-30,100000042,52,loan,214098.86,212281.37,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-10-31,100000043,52,oa,129375.46,127557.97,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-10-31,100000044,52,loan,212281.37,210463.88,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-11-30,100000045,52,oa,127557.97,125740.48,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-11-30,100000046,52,loan,210463.88,208646.39,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-12-31,100000047,52,oa,125740.48,123922.99,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-12-31,100000048,52,loan,208646.39,206828.9,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2026-12-31,100000049,52,oa,123922.99,124181.16,258.17,inflow,oa-Interest for ra at age 52-258.17
+2026-12-31,100000050,52,sa,254057.23,254904.09,846.86,inflow,sa-Interest for ra at age 52-846.86
+2026-12-31,100000051,52,ma,73195.54,73439.53,243.99,inflow,ma-Interest for ra at age 52-243.99
+2026-12-31,100000052,52,sa,254904.09,254954.09,50.0,inflow,sa-Extra Interest for ra at age 52-50.00
+2027-01-31,100000053,52,oa,124181.16,122363.67,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-01-31,100000054,52,loan,206828.9,205011.41,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-02-28,100000055,52,oa,122363.67,120546.18,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-02-28,100000056,52,loan,205011.41,203193.92,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-03-31,100000057,52,oa,120546.18,118728.69,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-03-31,100000058,52,loan,203193.92,201376.43,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-04-30,100000059,52,oa,118728.69,116911.2,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-04-30,100000060,52,loan,201376.43,199558.94,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-05-31,100000061,52,oa,116911.2,115093.71,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-05-31,100000062,52,loan,199558.94,197741.45,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-06-30,100000063,52,oa,115093.71,113276.22,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-06-30,100000064,52,loan,197741.45,195923.96,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 52--1817.49"
+2027-07-31,100000065,53,oa,113276.22,111458.73,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 53--1817.49"
+2027-07-31,100000066,53,loan,195923.96,194106.47,-1817.49,outflow,"loan-Loan payment from OA Account at year 4, age 53--1817.49"
+2027-08-31,100000067,53,oa,111458.73,109641.24,-1817.49,outflow,"oa-Loan payment from OA Account at year 4, age 53--1817.49"

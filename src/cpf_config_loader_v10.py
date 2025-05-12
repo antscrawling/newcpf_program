@@ -2,7 +2,8 @@ import json
 from datetime import datetime, date
 import os
 from typing import Any
-import re
+import re   
+from pprint import pprint
 
 
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
@@ -25,12 +26,12 @@ class ConfigLoader:
     Includes features for flattening/unflattening dictionaries, resolving formulas, and retrieving nested values.
     """
 
-    def __init__(self, config_filename: str = CONFIG_FILENAME):
+    def __init__(self, config_filename: str = None):
         self.src_dir = SRC_DIR
-        self.path = config_filename
+        self.path = os.path.join(SRC_DIR, config_filename)  # Full path to the config fileconfig_filename
         self.data = None
         self._load_config()
-        self._duplicate_config()
+        #self._duplicate_config()
 
     def _load_config(self):
         """
@@ -64,13 +65,25 @@ class ConfigLoader:
         with open(CONFIG_FILENAME_FOR_USE, 'w') as outfile:
             json.dump(self.data, outfile, indent=4, default=custom_serializer)
                                                                        
-    
-    def save(self, outfile=CONFIG_FILENAME_FOR_USE):
+    def save(self, output_filename=None):
+        """Save the configuration to a file."""
+        serializable_data = {}
+        for key, value in self._config_data.items():
+            if isinstance(value, (datetime, date)):
+                serializable_data[key] = value.strftime(DATE_FORMAT)
+            else:
+                serializable_data[key] = value
+        # Save to the src directory
+        output_path = os.path.join(SRC_DIR, output_filename or os)
+        with open(output_path, 'w') as f:
+            json.dump(serializable_data, f, indent=4)
+            
+    def save_file(self,infile: str, outfile=None):
         """
         Save the configuration to a file.
         """
         serializable_data = {}
-        for key, value in self.data.items():
+        for key, value in infile.items():
             if isinstance(value, (datetime, date)):
                 serializable_data[key] = value.strftime(DATE_FORMAT)
             else:
@@ -80,22 +93,26 @@ class ConfigLoader:
         with open(outfile, 'w') as f:
             json.dump(serializable_data, f, indent=4,default=custom_serializer)
 
-    def getdata(self, keys, default=None) -> Any:
+    def getdata(self, keys=None, default=None) -> Any:
         """
-        Retrieve a value from the configuration using a single key or a list of keys.
+        Retrieve a value from the configuration using a single key, a list of keys, or return the entire configuration if no keys are provided.
         """
+        # If no keys are provided, return the entire configuration
+        if keys is None:
+            return self.data
+
+        # If a single key is provided as a string, convert it to a list
         if isinstance(keys, str):
             keys = [keys]
 
-            current_value = self.data
-        elif isinstance(keys, (list, tuple, set)):            
+        current_value = self.data
+        # If keys is a list, tuple, or set, traverse the nested dictionary
+        if isinstance(keys, (list, tuple, set)):
             for key in keys:
                 if isinstance(current_value, dict):
                     current_value = current_value.get(key, default)
                 else:
                     return default
-        elif isinstance(keys, None):
-            current_value = self.data
         return current_value
 
     def flatten_dict(self, d, parent_key="", sep="."):
@@ -196,7 +213,13 @@ class ConfigLoader:
 
 
 if __name__ == "__main__":
-    # Example usage
-    config_loader = ConfigLoader(CONFIG_FILENAME)
-    print("Loaded Configuration:", config_loader.data)
+    # Initialize the ConfigLoader
+    config_loader = ConfigLoader(config_filename='test_config1.json')
 
+    # Retrieve the entire configuration
+   #entire_config = config_loader.getdata()
+   #pprint(entire_config)
+
+    # Retrieve a specific value
+    specific_value = config_loader.getdata(keys=["oa_allocation_below_55", "allocation"])
+    pprint( specific_value)

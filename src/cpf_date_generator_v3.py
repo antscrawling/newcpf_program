@@ -145,7 +145,7 @@ class DateGenerator(object):
             date_list.append(self.date_dict)  # Append the current date_dict to the list
             # Move to the first day of the next month (date + relativedelta -> date)
             current_date = current_date + relativedelta(months=1)
-            print(f'Procfessing Date Dictionary key = {date_key}, {age_at_period_end}')  # Debugging line to print each entry
+        #    print(f'Procfessing Date Dictionary key = {date_key}, {age_at_period_end}')  # Debugging line to print each entry
            # self.save_file('date_dict', format='pickle')  # Save the date_dict to file after each entry
             self.data = self.date_dict
         return self.date_dict
