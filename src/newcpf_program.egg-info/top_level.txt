@@ -1,13 +1,15 @@
 __init__
+cpf_analysis
 cpf_build_reports_v1
 cpf_config_loader_v4
 cpf_config_loader_v5
 cpf_config_loader_v6
 cpf_config_loader_v7
+cpf_config_loader_v8
+cpf_config_loader_v9
 cpf_data_saver_v2
 cpf_data_saver_v3
 cpf_date_generator_v3
-cpf_date_generator_v4
 cpf_program_v10
 cpf_program_v11
 cpf_program_v9

@@ -67,11 +67,11 @@ with col1:
             json.dump(nested_config, f, indent=4)
         st.success("Configuration saved successfully!")
     
+# Use the full path to the Python executable
+python_executable = sys.executable  # This gets the current Python executable being used
+
 with col2:
     if st.button("Run Simulation"):
-        # Use the full path to the Python executable
-        python_executable = sys.executable  # This gets the current Python executable being used
-
         # Run the simulation script
         try:
             result = subprocess.run(
@@ -91,7 +91,7 @@ with col3:
         # Run the report generation script
         try:
             result = subprocess.run(
-                [python_executable, os.path.join(PATH, "ccpf_build_reports_v1.py")],
+                [python_executable, os.path.join(PATH, "cpf_build_reports_v1.py")],
                 check=True,
                 capture_output=True,
                 text=True
@@ -120,7 +120,7 @@ with col4:
         
 with col5:
     import dicttoxml
-    xml = dicttoxml.dicttoxml(flat_config._config_data)
+    xml = dicttoxml.dicttoxml('cpf_report.csv')
     st.download_button(
         label="Download XML",
         data=xml,

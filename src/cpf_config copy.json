@@ -74,6 +74,7 @@
         }
     },
     "cpf_payout_age": 67,
+    "payout_type": "frs",
     "age_of_brs": 55,
     "start_date": "2025-05-01",
     "end_date": "2080-07-31",

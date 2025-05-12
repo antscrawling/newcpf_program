@@ -164,12 +164,12 @@ class CPFLogEntry:
                 "TYPE": self.flow_type,
                 "INFLOW": amount.__round__(2) if self.flow_type == "inflow" else 0,
                 "OUTFLOW": amount.__round__(2) if self.flow_type == "outflow" else 0,
-                "OA": getattr(self,f'{account}_balance').__round__(2) ,  
-                "SA": getattr(self,f'{account}_balance').__round__(2) ,  
-                "MA": getattr(self,f'{account}_balance').__round__(2) ,  
-                "RA": getattr(self,f'{account}_balance').__round__(2) ,  
-                "LOANS":  getattr(self,f'{account}_balance').__round__(2) ,  
-                "EXCESS": getattr(self,f'{account}_balance').__round__(2) ,
+                "OA":   self.oa_balance.__round__(2),  
+                "SA":   self.sa_balance.__round__(2),  
+                "MA":   self.ma_balance.__round__(2),  
+                "RA":   self.ra_balance.__round__(2),  
+                "LOANS":  self.loan_balance.__round__(2),   
+                "EXCESS": self.excess_balance.__round__(2), 
                 "MESSAGE": self.message
             })
 

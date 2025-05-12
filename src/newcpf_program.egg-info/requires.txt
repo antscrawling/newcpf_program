@@ -1,6 +1,9 @@
 dicttoxml>=1.7.16
+dotmap>=1.3.30
 jmespath
 pydantic>=2.11.4
 python-dateutil>=2.9.0.post0
 ruff>=0.11.8
+streamlit>=1.45.0
 tqdm>=4.67.1
+watchdog>=6.0.0

@@ -153,6 +153,9 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
             ###################################################################################
             #print(date_dict)
             for date_key, date_info in tqdm(date_dict.items(), desc="Processing CPF Data", unit="month", colour="blue"):
+                #stop when cpf._ra_balance == 0.0
+                
+                
                 
                 # add counter
                 cpf.dbreference = cpf.add_db_reference()
@@ -266,7 +269,9 @@ def main(dicct: dict[str, dict[str, dict[str, float]]] = None):
                         else:
                             cpf.payout = 0.0
                        
-
+                if cpf._ra_balance == 0.0 and cpf.age > 55:
+                    print(f"Stopping simulation at age {cpf.age} as RA balance is zero.")
+                    break
 
 
                 # Display balances including July 2029
