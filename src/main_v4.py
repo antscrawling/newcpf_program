@@ -54,10 +54,19 @@ with col1:
 
         # Save the updated configuration back to the file
         for k, v in nested_config.items():
-            if isinstance(v,(datetime, date)):
-                flat_config._config_data[k] = v.strftime("%Y-%m-%d")
-            else:  
-                flat_config._config_data[k]  = v
+            if isinstance(v, (datetime, date)):
+                nested_config[k] = v.strftime("%Y-%m-%d")  # Convert dates to strings
+            elif isinstance(v, str):
+                try:
+                    # Attempt to parse JSON strings back into dictionaries
+                    nested_config[k] = json.loads(v)
+                except (json.JSONDecodeError, TypeError):
+                    # Keep as string if not valid JSON
+                    nested_config[k] = v
+
+        # Save the updated configuration to a file
+        with open(CONFIG_FILENAME, "w") as f:
+            json.dump(nested_config, f, indent=4)
         st.success("Configuration saved successfully!")
         
 
@@ -120,14 +129,28 @@ with col4:
         
 with col5:
     import dicttoxml
-    xml = dicttoxml.dicttoxml('cpf_report.csv')
-    st.download_button(
-        label="Download XML",
-        data=xml,
-        file_name="cpf_report.xml",
-        mime="application/xml",
+    import pandas as pd
+
+    # Read the contents of cpf_report.csv
+    report_file_path = os.path.join(SRC_DIR, "cpf_report.csv")
+    try:
+        report_df = pd.read_csv(report_file_path)
+        # Convert the DataFrame to a dictionary
+        report_dict = report_df.to_dict(orient="records")
+        # Convert the dictionary to XML
+        xml_data = dicttoxml.dicttoxml(report_dict, custom_root="CPFReport", attr_type=False)
+        # Provide the XML data for download
+        st.download_button(
+            label="Download XML",
+            data=xml_data,
+            file_name="cpf_report.xml",
+            mime="application/xml",
         )
-    
+    except FileNotFoundError:
+        st.error(f"File not found: {report_file_path}")
+    except Exception as e:
+        st.error(f"An error occurred while generating the XML: {e}")
+
 with col6:
     if st.button(" EXIT "):
         # Forcefully exit the Streamlit app
