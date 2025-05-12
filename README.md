@@ -79,8 +79,38 @@ New CPF program that calculates Singapore retirement funds.
 
 ---
 
+## Application Features
+
+1. **Configuration Editor**:
+   - Allows users to edit CPF simulation parameters dynamically.
+   - Supports editing numeric, string, and JSON-like nested structures.
+   - Automatically converts flat configurations into nested dictionaries when saving.
+   - Saves the updated configuration to `cpf_config.json` in the correct format.
+
+2. **Run Simulation**:
+   - Executes the CPF simulation script (`cpf_run_simulation_v8.py`) using the current configuration.
+   - Displays the simulation output or errors directly in the Streamlit app.
+
+3. **Generate CSV Report**:
+   - Runs the report generation script (`cpf_build_reports_v1.py`) to create a detailed CPF report.
+   - Displays success or error messages based on the script's execution.
+
+4. **Run Analysis**:
+   - Executes the CPF analysis script (`cpf_analysis_v1.py`) to analyze mismatches and calculate final balances.
+   - Displays the analysis results or errors directly in the app.
+
+5. **Download XML Report**:
+   - Reads the contents of `cpf_report.csv` and converts it into an XML format.
+   - Provides a "Download XML" button to download the XML file (`cpf_report.xml`).
+
+6. **Exit Application**:
+   - Provides an "EXIT" button to terminate the Streamlit app immediately.
+
+---
+
 ### Notes
 - Ensure you have the `requirements.txt` file in the project directory with all the necessary dependencies listed.
 - For Docker, ensure the `Dockerfile` is properly configured to install dependencies and run the Streamlit app.
+- Ensure all required scripts (`cpf_run_simulation_v8.py`, `cpf_build_reports_v1.py`, `cpf_analysis_v1.py`) and files (`cpf_report.csv`, `cpf_config.json`) are present in the `src` directory.
 
 Let me know if you need further assistance!
