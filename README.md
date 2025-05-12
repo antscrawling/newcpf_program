@@ -1,5 +1,7 @@
 # newcpf_program
 New CPF program that calculates Singapore retirement funds.
+## clone the repository
+git clone https://github.com/antscrawling/newcpf_program.git
 
 ## Installation Steps
 
