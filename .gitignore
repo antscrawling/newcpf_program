@@ -24,3 +24,9 @@ src/cpf_config_flat_updated.json
 .gitignore
 src/cpf_report (1).xml
 src/cpf_config_flat_updated.json
+src/__pycache__/cpf_analysis_v1.cpython-313.pyc
+src/__pycache__/cpf_build_reports_v1.cpython-313.pyc
+src/__pycache__/cpf_config_loader_v8.cpython-311.pyc
+src/__pycache__/cpf_config_loader_v10.cpython-313.pyc
+src/__pycache__/cpf_run_simulation_v8.cpython-313.pyc
+src/__pycache__/cpf_config_loader_v8.cpython-311.pyc

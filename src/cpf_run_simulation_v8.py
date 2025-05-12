@@ -366,85 +366,107 @@ def display_data_from_db():
     conn.close()
 
 if __name__ == "__main__":
-    mydict = {}
-    mydict = {
-    "allocation_below_55": {
-        "oa": {
-            "allocation": 0.6217,
-            "amount": 1702.2146
+    # Load the configuration file
+    config_loader = ConfigLoader(CONFIG_FILENAME)
+    # Load the configuration data
+    config_loader.data  = config_loader.getdata()
+    # Extract keys and values from the configuration data
+    keys, values = config_loader.extract_keys_and_values()
+    
+    # Create a dictionary to hold the allocation data
+    allocation_data = {
+        'allocation_below_55': {
+            'oa': {'allocation': 0.0, 'amount': 0.0},
+            'sa': {'allocation': 0.0, 'amount': 0.0},
+            'ma': {'allocation': 0.0, 'amount': 0.0},
         },
-        "sa": {
-            "allocation": 0.1621,
-            "amount": 443.8298
-        },
-        "ma": {
-            "allocation": 0.2162,
-            "amount": 591.9556
+        'allocation_above_55': {
+            'oa': {'allocation': 0.0, 'amount': 0.0},
+            'sa': {'allocation': 0.0, 'amount': 0.0},
+            'ma': {'allocation': 0.0, 'amount': 0.0},
+            'ra': {'allocation': 0.0, 'amount': 0.0},
         }
-    },
-    "allocation_above_55": {
-        "oa": {
-            "56_to_60": {
-                "allocation": 0.3694,
-                "amount": 1011.4172
-            },
-            "61_to_65": {
-                "allocation": 0.149,
-                "amount": 407.962
-            },
-            "66_to_70": {
-                "allocation": 0.0607,
-                "amount": 166.1966
-            },
-            "above_70": {
-                "allocation": 0.08,
-                "amount": 219.04
-            }
-        },
-        "sa": {
-            "allocation": 0.0,
-            "amount": 0.0
-        },
-        "ma": {
-            "56_to_60": {
-                "allocation": 0.323,
-                "amount": 884.374
-            },
-            "61_to_65": {
-                "allocation": 0.4468,
-                "amount": 1223.3383999999999
-            },
-            "66_to_70": {
-                "allocation": 0.6363,
-                "amount": 1742.1894
-            },
-            "above_70": {
-                "allocation": 0.84,
-                "amount": 2299.92
-            }
-        },
-        "ra": {
-            "56_to_60": {
-                "allocation": 0.3076,
-                "amount": 842.2088
-            },
-            "61_to_65": {
-                "allocation": 0.4042,
-                "amount": 1106.6996
-            },
-            "66_to_70": {
-                "allocation": 0.303,
-                "amount": 829.614
-            },
-            "above_70": {
-                "allocation": 0.08,
-                "amount": 219.04
-            }
-        }
-    }
     }
     
+    # Call the main function with the allocation data
+    main(allocation_data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   
-    main(dicct=mydict)
