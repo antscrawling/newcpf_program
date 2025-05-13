@@ -8,6 +8,7 @@ CONFIG_FILENAME = 'cpf_config.json'
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Dynamically determine the src directory
 LOG_FILE_PATH = os.path.join(SRC_DIR, "cpf_log_file.csv")  # Log file path inside src folder
 
+#PATH="$HOME/miniconda3/bin:$PATcd srH"
 
 class CPFLogEntry:
     def __init__(self, csv_file_path: str):

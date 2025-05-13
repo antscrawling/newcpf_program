@@ -4,6 +4,7 @@ import os
 from typing import Any
 import re   
 from pprint import pprint
+import re 
 
 
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))  # Path to the src directory
@@ -11,7 +12,8 @@ CONFIG_FILENAME = os.path.join(SRC_DIR, 'cpf_config.json')  # Full path to the c
 CONFIG_FILENAME_FOR_USE = os.path.join(SRC_DIR, 'cpf_config_for_use.json')  # Full path to the config file for use
 DATABASE_NAME = os.path.join(SRC_DIR, 'cpf_simulation.db')  # Full path to the database file
 
-DATE_FORMAT = "%Y-%m-%d"
+DATE_FORMAT = "%Y-%m-%d"    
+PATTERN  = r"\b\d{4}-\d{2}-\d{2}\b"
 
 def custom_serializer(obj):
     """Custom serializer for non-serializable objects like datetime."""
@@ -77,7 +79,19 @@ class ConfigLoader:
         output_path = os.path.join(SRC_DIR, output_filename or os)
         with open(output_path, 'w') as f:
             json.dump(serializable_data, f, indent=4)
-            
+    
+    def convert_to_datetime(self, date_str: str) -> datetime.date:
+        """
+        Convert a date string to a datetime.date object.
+        """
+        if isinstance(date_str, str):
+            date_str = datetime.strptime(date_str, DATE_FORMAT).date()
+        elif isinstance(date_str, datetime):
+            date_str = date_str.date()
+        elif not isinstance(date_str, date):
+            raise TypeError(f"date_str must be a date object, got {type(date_str)}")
+        return date_str
+          
     def save_file(self,infile: str, outfile=None):
         """
         Save the configuration to a file.
@@ -210,19 +224,44 @@ class ConfigLoader:
             else:
                 return None
         return nested
-
+    def convert_to_date(self) -> datetime.date:
+        """
+        Convert a date string to a datetime.date object.
+        """
+        for key, value in self.data.items():
+            if isinstance(value, str) and re.match(PATTERN, value):
+                self.data[key] = self.convert_to_datetime(value)
+            elif isinstance(value, datetime):
+                self.data[key] = value.date()
+            elif isinstance(value, date):
+                self.data[key] = value
+            elif isinstance(value, dict):
+                continue
+            elif isinstance(value,(str,int,float)): 
+                continue
+            else:
+                raise TypeError(f"Unsupported type for key '{key}': {type(value)}")
+    
 
 if __name__ == "__main__":
     # Initialize the ConfigLoader
     config_loader = ConfigLoader(config_filename='cpf_config.json')
+    config_loader.convert_to_date()
+    print(config_loader.data)
+    
+    
+    
+    
+    
 
     # Retrieve the entire configuration
    #entire_config = config_loader.getdata()
    #pprint(entire_config)
 
-    # Retrieve a specific value
-    specific_value = config_loader.getdata(keys=["oa_allocation_below_55", "allocation"])
-    pprint( specific_value)
-    
-    all = config_loader.getdata()
-    pprint(all)
+    ## Retrieve a specific value
+    #specific_value = config_loader.getdata(keys=["oa_allocation_below_55", "allocation"])
+    #pprint( specific_value)
+    #
+    #all = config_loader.getdata()
+    #pprint(all)
+#

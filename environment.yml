@@ -1,0 +1,18 @@
+# filepath: /Users/joseibay/Documents/newcpf_program/environment.yml
+name: newcpf_program
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - tqdm
+  - paramiko
+  - python-dateutil
+  - pip
+  - pip:
+      - dicttoxml
+      - jmespath
+      - striprtf
+
