@@ -1,13 +1,16 @@
 # newcpf_program
 New CPF program that calculates Singapore retirement funds.
-## clone the repository
-git clone https://github.com/antscrawling/newcpf_program.git
 
 ## Installation Steps
 
+### clone the repository
+- cd <your dest folder>
+- git clone https://github.com/antscrawling/newcpf_program.git
+
+
 ### Windows
 1. **Install Python**:
-   - Download and install Python from the [official Python website](https://www.python.org/downloads/).
+   - Download and install Python from the [official Python website]  (https://www.python.org/downloads/).
    - Ensure you check the box to add Python to your system's PATH during installation.
 
 2. **Install Required Libraries**:
